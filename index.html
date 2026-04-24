@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>班級小遊戲</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Noto Sans TC", sans-serif;
+      background: #f0f4ff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+    h1 {
+      font-size: 2rem;
+      color: #3b5bdb;
+      margin-bottom: 0.5rem;
+    }
+    p.subtitle {
+      color: #666;
+      margin-bottom: 2rem;
+    }
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1.5rem;
+      width: 100%;
+      max-width: 800px;
+    }
+    .game-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+    .game-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    }
+    .game-card .icon { font-size: 3rem; margin-bottom: 0.75rem; }
+    .game-card h2 { font-size: 1.1rem; color: #333; margin-bottom: 0.4rem; }
+    .game-card p { font-size: 0.85rem; color: #888; }
+    .empty {
+      color: #aaa;
+      margin-top: 3rem;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 班級小遊戲</h1>
+  <p class="subtitle">選一個遊戲開始玩吧！</p>
+
+  <div class="game-grid" id="gameGrid">
+    <!-- 遊戲卡片會在這裡新增 -->
+  </div>
+  <p class="empty" id="emptyMsg">目前還沒有遊戲，快去新增一個！</p>
+
+  <script>
+    const games = [
+      // 範例格式（解除註解後使用）：
+      // { name: "英文單字閃卡", desc: "練習單字記憶", icon: "🃏", url: "games/flashcard/index.html" },
+    ];
+
+    const grid = document.getElementById("gameGrid");
+    const emptyMsg = document.getElementById("emptyMsg");
+
+    if (games.length > 0) {
+      emptyMsg.style.display = "none";
+      games.forEach(g => {
+        const card = document.createElement("a");
+        card.className = "game-card";
+        card.href = g.url;
+        card.innerHTML = `<div class="icon">${g.icon}</div><h2>${g.name}</h2><p>${g.desc}</p>`;
+        grid.appendChild(card);
+      });
+    }
+  </script>
+</body>
+</html>
