@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rhythm</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+
+        body {
+            background-color: #050510; color: #fff; font-family: 'Orbitron', sans-serif;
+            overflow: hidden; touch-action: none; transition: background-color 0.2s ease;
+        }
+
+        #gameCanvas {
+            display: block; width: 100vw; height: 100vh; transition: opacity 1s ease;
+            position: relative; z-index: 2;
+        }
+
+        #matrixCanvas {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 9; display: none; opacity: 1; pointer-events: none;
+        }
+
+        #uiLayer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; display: flex; flex-direction: column;
+            justify-content: space-between; padding: 20px; transition: opacity 1s ease; z-index: 3;
+        }
+
+        .top-bar { display: flex; justify-content: space-between; align-items: center; text-shadow: 0 0 10px #0ff; pointer-events: auto; }
+        #scoreDisplay { font-size: 2rem; font-weight: 700; color: #0ff; }
+        #accuracyDisplay { font-size: 1.5rem; color: #fff; text-shadow: 0 0 5px #fff; }
+
+        #pauseBtn {
+            cursor: pointer; width: 40px; height: 40px; display: flex; justify-content: center; align-items: center;
+            background: rgba(0, 255, 255, 0.1); border: 1px solid #0ff; border-radius: 5px; transition: all 0.2s; margin-left: 20px;
+        }
+        #pauseBtn:hover { background: #0ff; }
+        #pauseBtn svg { fill: #0ff; transition: all 0.2s; }
+        #pauseBtn:hover svg { fill: #000; }
+
+        #comboDisplay {
+            font-size: 3rem; font-weight: 900; color: #f0f; text-shadow: 0 0 15px #f0f; text-align: center;
+            opacity: 0; transition: opacity 0.1s;
+        }
+        #comboDisplay.active { opacity: 1; }
+        #comboText { font-size: 1rem; letter-spacing: 5px; }
+
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5, 5, 16, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center;
+            pointer-events: auto; z-index: 10; backdrop-filter: blur(5px);
+            transition: background 0.5s ease, backdrop-filter 0.5s ease;
+        }
+
+        #pauseMenu, #resultScreen { display: none; }
+
+        #introScreen { background-color: #000; z-index: 999; transition: opacity 1s ease; }
+        #introText {
+            font-size: 2.5rem; color: #fff; font-family: '微軟正黑體', sans-serif;
+            letter-spacing: 8px; opacity: 0; text-align: center; text-shadow: 0 0 10px rgba(255,255,255,0.3);
+        }
+
+        #creepyText {
+            position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%);
+            color: #900; font-size: 1.5rem; letter-spacing: 15px; opacity: 0;
+            pointer-events: none; transition: opacity 1s ease-in; font-family: '微軟正黑體', sans-serif;
+            z-index: 100; text-shadow: 0 0 15px rgba(255,0,0,0.8); font-weight: bold;
+        }
+
+        h1 {
+            font-size: 4rem; color: #0ff; text-shadow: 0 0 20px #0ff, 0 0 40px #0ff;
+            margin-bottom: 20px; text-align: center; letter-spacing: 5px; cursor: pointer; transition: all 0.1s;
+        }
+
+        .glitch-red {
+            color: #f00 !important; text-shadow: 2px 0 0 #0f0, -2px 0 0 #00f !important; animation: shake 0.2s infinite;
+        }
+        @keyframes shake {
+            0% { transform: translate(2px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(0px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(2px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(2px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        p.inst { font-size: 1.2rem; color: #ccc; margin-bottom: 30px; text-align: center; line-height: 1.8; font-family: '微軟正黑體', sans-serif; }
+
+        .song-selector { display: flex; gap: 20px; margin-bottom: 35px; justify-content: center; flex-wrap: wrap; max-width: 800px; }
+        .song-btn {
+            padding: 12px 25px; font-size: 1.1rem; font-family: 'Orbitron', '微軟正黑體', sans-serif;
+            background: rgba(0, 0, 0, 0.5); color: rgba(0, 255, 255, 0.6); border: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 8px; cursor: pointer; transition: all 0.3s; font-weight: bold;
+        }
+        .song-btn:hover { border-color: rgba(0, 255, 255, 0.8); color: rgba(0, 255, 255, 0.9); }
+        .song-btn.selected { background: rgba(0, 255, 255, 0.2); border-color: #0ff; color: #fff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.4) inset, 0 0 10px rgba(0, 255, 255, 0.4); }
+        .song-btn-404 { color: #f00 !important; border-color: #f00 !important; text-shadow: 0 0 5px #f00; animation: shake 0.5s infinite; }
+
+        .diff-container, .menu-btns { display: flex; gap: 15px; margin-bottom: 20px; position: relative; }
+        .btn {
+            padding: 15px 30px; font-size: 1.2rem; font-family: 'Orbitron', sans-serif;
+            background: rgba(0, 0, 0, 0.5); color: #fff; border: 2px solid #555; border-radius: 5px;
+            cursor: pointer; transition: all 0.2s; text-transform: uppercase; font-weight: bold; position: relative;
+        }
+        .btn:hover { transform: scale(1.05); }
+        .btn-easy { border-color: #0f0; color: #0f0; box-shadow: 0 0 10px #0f0 inset; }
+        .btn-easy:hover { background: #0f0; color: #000; }
+        .btn-normal { border-color: #0ff; color: #0ff; box-shadow: 0 0 10px #0ff inset; }
+        .btn-normal:hover { background: #0ff; color: #000; }
+        .btn-chaos { border-color: #f00; color: #f00; box-shadow: 0 0 10px #f00 inset; text-shadow: 0 0 5px #f00; }
+        .btn-chaos:hover { background: #f00; color: #fff; box-shadow: 0 0 30px #f00; }
+
+        #hitFeedback {
+            position: absolute; top: 60%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 2.5rem; font-weight: bold; text-transform: uppercase; opacity: 0; pointer-events: none;
+        }
+
+        /* 彩蛋 1：AI 秘密留言 */
+        .ai-secret {
+            position: absolute; left: 15px; bottom: 15px; font-size: 0.8rem; color: rgba(255, 255, 255, 0.25);
+            font-family: '微軟正黑體', sans-serif; transition: color 0.4s, text-shadow 0.4s; cursor: default; z-index: 10;
+        }
+        .ai-secret:hover { color: rgba(255, 255, 255, 0.9); text-shadow: 0 0 8px rgba(255, 255, 255, 0.8); }
+
+        /* 彩蛋圖鑑按鈕與彈窗 */
+        #easterEggBtn {
+            position: absolute; top: 20px; right: 20px; width: 45px; height: 45px;
+            border: 2px solid #0ff; border-radius: 50%; display: none; justify-content: center; align-items: center;
+            cursor: pointer; color: #0ff; font-weight: bold; font-family: Orbitron; font-size: 1.5rem;
+            box-shadow: 0 0 15px rgba(0,255,255,0.4); background: rgba(0,255,255,0.1); z-index: 100;
+            transition: all 0.3s;
+        }
+        #easterEggBtn:hover { background: #0ff; color: #000; box-shadow: 0 0 25px #0ff; transform: scale(1.1); }
+
+        #easterEggModal { display: none; z-index: 2000; }
+        .easter-egg-content {
+            background: rgba(5, 5, 16, 0.95); border: 2px solid #0ff; border-radius: 15px; padding: 30px;
+            width: 85%; max-width: 550px; box-shadow: 0 0 30px rgba(0, 255, 255, 0.2) inset, 0 0 20px #0ff;
+            position: relative; font-family: '微軟正黑體', sans-serif;
+        }
+        .easter-egg-content h2 { color: #0ff; text-align: center; margin-bottom: 20px; text-shadow: 0 0 10px #0ff; letter-spacing: 2px;}
+        .easter-egg-content ul { color: #ddd; line-height: 2; font-size: 1.1rem; list-style: none; padding: 0; }
+        .easter-egg-content li { margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;}
+        .easter-egg-content strong { color: #f0f; text-shadow: 0 0 5px rgba(255,0,255,0.5); }
+        .close-btn {
+            margin-top: 25px; width: 100%; padding: 12px; background: rgba(0, 255, 255, 0.1);
+            border: 1px solid #0ff; color: #0ff; font-weight: bold; cursor: pointer; border-radius: 8px;
+            font-size: 1.1rem; transition: 0.2s; font-family: 'Orbitron', '微軟正黑體';
+        }
+        .close-btn:hover { background: #0ff; color: #000; }
+
+        /* 彩蛋 2：假瀏覽器權限通知 */
+        #fakePermissionBox {
+            position: absolute; top: 25px; left: 25px; width: 330px; background: #fff; color: #333;
+            border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); padding: 15px;
+            font-family: Arial, sans-serif; z-index: 1100; display: none; flex-direction: column;
+        }
+        .perm-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 14px; font-weight: 500;}
+        .perm-btns { display: flex; justify-content: flex-end; gap: 5px; }
+        .perm-btn { background: none; border: none; color: #1a73e8; cursor: pointer; font-size: 13px; padding: 6px 12px; font-weight: bold; border-radius: 4px; }
+        .perm-btn:hover { background: #f1f3f4; }
+        .perm-troll { color: #d32f2f; font-size: 18px; font-weight: bold; text-align: center; padding: 15px 0; display: none; }
+
+        /* 彩蛋 3：引戰食物 reCAPTCHA */
+        #fakeRecaptcha {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; width: 380px;
+            border-radius: 6px; box-shadow: 0 4px 25px rgba(0,0,0,0.6); z-index: 1100; display: none; flex-direction: column;
+            font-family: '微軟正黑體', Arial, sans-serif; border: 1px solid #ccc; overflow: hidden;
+        }
+        .re-header { background: #1a73e8; color: #fff; padding: 20px; text-align: center; }
+        .re-header p { margin: 0 0 8px 0; font-size: 14px; opacity: 0.9; }
+        .re-header h2 { margin: 0; font-size: 19px; font-weight: bold; line-height: 1.4; word-break: keep-all;}
+
+        .re-opt-btn {
+            background: #fff; border: 2px solid #ddd; padding: 15px; font-size: 16px; font-weight: bold;
+            border-radius: 8px; cursor: pointer; transition: 0.2s; color: #333; width: 100%; text-align: center;
+        }
+        .re-opt-btn:hover { border-color: #1a73e8; background: #f4f8ff; color: #1a73e8; transform: scale(1.02); }
+
+        /* 假讀取條與嘲諷 */
+        #fakeLoadingScreen, #mockingScreen { display: none; background: #000; z-index: 1000; flex-direction: column;}
+        .loading-bar-container { width: 300px; height: 4px; background: #222; margin-top: 20px; border-radius: 2px; overflow: hidden; }
+        #loadingBar { width: 0%; height: 100%; background: #0ff; transition: width 0.3s ease-out; box-shadow: 0 0 10px #0ff; }
+        #loadingText { font-family: '微軟正黑體'; font-size: 1.2rem; color: #0ff; letter-spacing: 2px; }
+
+        #mockingScreen { font-family: '微軟正黑體'; font-size: 3rem; color: #fff; letter-spacing: 10px; justify-content: center; align-items: center;}
+
+        @keyframes breakFall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            20% { transform: translateY(-20px) rotate(-5deg); }
+            100% { transform: translateY(150vh) rotate(45deg); opacity: 0; }
+        }
+        .fall-down { animation: breakFall 1.2s forwards !important; }
+
+        #noPauseText {
+            color: #f00; font-size: 3rem; text-shadow: 0 0 20px #f00; font-weight: 900;
+            display: none; position: absolute; z-index: 11; transition: opacity 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="matrixCanvas"></canvas>
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="uiLayer">
+        <div class="top-bar">
+            <div id="scoreDisplay">0000000</div>
+            <div style="display: flex; align-items: center;">
+                <div id="accuracyDisplay">100.00%</div>
+                <div id="pauseBtn" title="Pause Game">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                </div>
+            </div>
+        </div>
+        <div id="comboContainer">
+            <div id="comboDisplay">0<br><span id="comboText">COMBO</span></div>
+        </div>
+        <div id="hitFeedback">PERFECT</div>
+    </div>
+
+    <!-- 各種特效與選單 -->
+    <div id="introScreen" class="overlay"><div id="introText"></div></div>
+
+    <!-- 彩蛋 2：假相機權限視窗 -->
+    <div id="fakePermissionBox">
+        <div class="perm-header" id="permHeader">
+            <span style="font-size: 18px;">📷</span> RHYTHM 想要存取您的相機，以分析您驚恐的表情。
+        </div>
+        <div class="perm-btns" id="permBtns">
+            <button class="perm-btn" id="btnDeny">封鎖</button>
+            <button class="perm-btn" id="btnAllow">允許</button>
+        </div>
+        <div class="perm-troll" id="permTroll">
+            <div id="trollText">我就知道你不敢。</div>
+            <div id="trollImage" style="font-size: 80px; margin-top: 15px; display: none;">🤡</div>
+        </div>
+    </div>
+
+    <!-- 彩蛋 3：引戰食物 reCAPTCHA -->
+    <div id="fakeRecaptcha">
+        <div class="re-header" id="reHeader">
+            <p>系統偵測到異常，為了證明您具備人類的靈魂：</p>
+            <h2 id="reTaskText">問題載入中...</h2>
+        </div>
+        <div id="reOptions" style="padding: 25px 20px; display: flex; flex-direction: column; gap: 15px; background: #fafafa; align-items: center;">
+            <!-- 選項按鈕由 JS 生成 -->
+        </div>
+        <!-- 驗證通過後的嘲諷文字區塊 -->
+        <div id="reMockText" style="display: none; padding: 40px 20px; text-align: center; color: #333; font-size: 1.3rem; font-weight: bold; line-height: 1.8; background: #fff;"></div>
+        <div class="re-footer" id="reFooter">
+            <span id="reRefresh" style="font-size: 24px; color: #999; cursor: pointer; transition: 0.2s;" title="換一題">↻</span>
+            <button class="re-verify" id="btnVerify" style="display: none;">驗證</button>
+        </div>
+    </div>
+
+    <div id="fakeLoadingScreen" class="overlay">
+        <div id="loadingText">載入音樂中...</div>
+        <div class="loading-bar-container"><div id="loadingBar"></div></div>
+    </div>
+
+    <div id="mockingScreen" class="overlay">放棄得真快。</div>
+
+    <div id="startScreen" class="overlay" style="display: none;">
+        <h1 id="mainTitle">RHYTHM</h1>
+        <p class="inst">
+            鍵盤: F, G, H, J<br>
+            藍色音符：按一下 (Tap) | 紫色音符：長按 (Hold)
+        </p>
+        <div class="song-selector" id="songSelectorBox">
+            <button class="song-btn selected" onclick="selectSong('ELISE', this)">給愛麗絲 (Synthwave)</button>
+            <button class="song-btn" onclick="selectSong('RANDOM', this)">隨機生成</button>
+        </div>
+        <div class="diff-container">
+            <button class="btn btn-easy" onclick="initGame('EASY')">EASY</button>
+            <button class="btn btn-normal" onclick="initGame('NORMAL')">NORMAL</button>
+            <button class="btn btn-chaos" onclick="initGame('HARD')">CHAOS</button>
+        </div>
+
+        <!-- 彩蛋圖鑑按鈕 (第一次玩完才會出現) -->
+        <div id="easterEggBtn" onclick="document.getElementById('easterEggModal').style.display='flex'" title="系統異常日誌">?</div>
+
+        <!-- 彩蛋 1：AI秘密留言 -->
+        <div class="ai-secret">這遊戲的程式是我幫他寫的，他其實只負責出一張嘴 —— Gemini AI 留</div>
+    </div>
+
+    <!-- 彩蛋圖鑑彈窗 -->
+    <div id="easterEggModal" class="overlay">
+        <div class="easter-egg-content">
+            <h2>[ 獨特的設計 ]</h2>
+            <ul>
+                <li><strong>放棄：</strong>你可以試試不到 5 秒按退出</li>
+                <li><strong>1 拒絕暫停：</strong>40% 的機率暫停鍵會失效</li>
+                <li><strong>2 結算畫面 (Matrix Result)：</strong>可以等 5 秒不動</li>
+                <li><strong>3 標題碎裂：</strong>連續點首頁標題 RHYTHM 10 次</li>
+                <li><strong>4 [數據損毀]：</strong>隱藏曲有 25% 的機率出現在選單</li>
+                <li><strong>5 背後靈：</strong>看看你後面...............</li>
+                <li><strong>6 AI 留言：</strong>在首頁選單的左下角</li>
+                <li><strong>7 按鈕鬼抓人：</strong>50% 機率結算畫面的「回到選單」會逃跑</li>
+            </ul>
+            <button class="close-btn" onclick="document.getElementById('easterEggModal').style.display='none'">確認</button>
+        </div>
+    </div>
+
+    <div id="pauseMenu" class="overlay">
+        <h1 id="pauseTitle">PAUSED</h1>
+        <div class="menu-btns" id="pauseBtns">
+            <button class="btn btn-normal" onclick="togglePause()">繼續遊戲</button>
+            <button class="btn" onclick="restartGame()">重新開始</button>
+            <button class="btn" onclick="goToMenu(true)">回到選單</button>
+        </div>
+        <div id="noPauseText">沒有暫停這種東西</div>
+    </div>
+
+    <div id="resultScreen" class="overlay">
+        <h1>STAGE CLEAR</h1>
+        <div id="resultDetails" class="inst"></div>
+        <div class="menu-btns">
+            <button class="btn btn-normal" onclick="restartGame()">再玩一次</button>
+            <button class="btn" id="btnGoMenu" onclick="goToMenu(false)">回到選單</button>
+        </div>
+    </div>
+
+    <div id="creepyText">看看你後面................</div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const mCanvas = document.getElementById('matrixCanvas');
+        const mCtx = mCanvas.getContext('2d');
+        let width, height;
+
+        let isPlaying = false, isPaused = false, isEnding = false;
+        let gameTime = 0, lastTime = 0, score = 0, combo = 0, maxCombo = 0;
+        let totalNotes = 0, hitNotes = 0;
+
+        let hasLoadedOnce = false;
+        let isPauseShattering = false;
+        let isMenuBtnCursed = false;
+
+        let currentDifficulty = 'NORMAL'; let currentSong = 'ELISE';
+        let NOTE_SPEED = 600; const LANE_WIDTH = 80; let HIT_WINDOW = 0.2;
+
+        const keys = { 0: false, 1: false, 2: false, 3: false };
+        const keyMap = { 'f': 0, 'g': 1, 'h': 2, 'j': 3 };
+
+        let notes = [], particles = [], activeHolds = { 0: null, 1: null, 2: null, 3: null };
+        let judgeLine = { x: 0, y: 0, angle: 0 }, lineScript = [];
+
+        const scoreEl = document.getElementById('scoreDisplay'), comboEl = document.getElementById('comboDisplay');
+        const accEl = document.getElementById('accuracyDisplay'), hitFeedbackEl = document.getElementById('hitFeedback');
+        const startScreen = document.getElementById('startScreen');
+        const pauseMenu = document.getElementById('pauseMenu'), resultScreen = document.getElementById('resultScreen');
+
+        let audioCtx, masterCompressor, activeAudioNodes = [], audioStartTime = 0, SONG_LENGTH = 34;
+
+        function resize() {
+            width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight;
+            mCanvas.width = width; mCanvas.height = height;
+        }
+        window.addEventListener('resize', resize); resize();
+
+        let titleClicks = 0;
+        document.getElementById('mainTitle').addEventListener('click', function() {
+            titleClicks++;
+            if (titleClicks >= 10) {
+                this.innerText = Math.random() > 0.5 ? 'ERROR' : 'RUN'; this.classList.add('glitch-red');
+                document.body.style.backgroundColor = '#300';
+                setTimeout(() => {
+                    this.innerText = 'RHYTHM'; this.classList.remove('glitch-red');
+                    document.body.style.backgroundColor = '#050510'; titleClicks = 0;
+                }, 2000);
+            }
+        });
+
+        let matrixActive = false, matrixTimeout, matrixInterval, glitchScoreInterval;
+        let letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*'; let fontSize = 22, drops = [];
+        function startMatrix() {
+            matrixActive = true; mCanvas.style.display = 'block';
+            let columns = Math.floor(mCanvas.width / fontSize) + 1; drops = [];
+            for(let x=0; x<columns; x++) drops[x] = Math.floor(Math.random() * -50);
+            resultScreen.style.background = 'rgba(0, 0, 0, 0.2)'; resultScreen.style.backdropFilter = 'none';
+            matrixInterval = setInterval(drawMatrix, 50);
+        }
+        function stopMatrix() {
+            matrixActive = false; mCanvas.style.display = 'none';
+            resultScreen.style.background = 'rgba(5, 5, 16, 0.9)'; resultScreen.style.backdropFilter = 'blur(5px)';
+            clearInterval(glitchScoreInterval); clearTimeout(matrixTimeout); clearInterval(matrixInterval);
+        }
+        function drawMatrix() {
+            if (!matrixActive) return;
+            mCtx.shadowBlur = 0; mCtx.fillStyle = 'rgba(0, 0, 0, 0.15)'; mCtx.fillRect(0, 0, mCanvas.width, mCanvas.height);
+            mCtx.shadowBlur = 5; mCtx.shadowColor = '#0F0'; mCtx.fillStyle = '#0F0'; mCtx.font = 'bold ' + fontSize + 'px monospace';
+            for(let i=0; i<drops.length; i++) {
+                let text = letters.charAt(Math.floor(Math.random() * letters.length));
+                mCtx.fillText(text, i*fontSize, drops[i]*fontSize);
+                if(drops[i]*fontSize > mCanvas.height && Math.random() > 0.95) drops[i] = 0;
+                drops[i]++;
+            }
+        }
+
+        function checkGhostTrack() {
+            let existingBtn = document.getElementById('btn-404');
+            if (existingBtn) existingBtn.remove();
+            if (currentSong === '404') {
+                currentSong = 'ELISE';
+                document.querySelectorAll('.song-btn').forEach(b => b.classList.remove('selected'));
+                document.querySelector('.song-btn').classList.add('selected');
+            }
+            if (Math.random() < 0.25) {
+                let btn = document.createElement('button'); btn.id = 'btn-404'; btn.className = 'song-btn song-btn-404';
+                btn.innerText = '[ 數據損毀 ]'; btn.onclick = function() { selectSong('404', this); };
+                document.getElementById('songSelectorBox').appendChild(btn);
+            }
+        }
+
+        function selectSong(songId, btnElement) {
+            currentSong = songId;
+            document.querySelectorAll('.song-btn').forEach(btn => btn.classList.remove('selected'));
+            btnElement.classList.add('selected');
+        }
+
+        function setDifficulty(diff) {
+            currentDifficulty = diff; let endT = SONG_LENGTH + 5;
+            if (currentSong === '404') {
+                NOTE_SPEED = 1200; HIT_WINDOW = 0.1; lineScript = [];
+                for(let t=0; t<endT; t+=2) lineScript.push({ time: t, x: Math.random()*0.8+0.1, y: Math.random()*0.8+0.1, angle: (Math.random()-0.5)*Math.PI*4 });
+                lineScript.push({ time: endT, x: 0.5, y: 0.8, angle: 0 }); return;
+            }
+            if (diff === 'EASY') {
+                NOTE_SPEED = 450; HIT_WINDOW = 0.25; lineScript = [{ time: 0, x: 0.5, y: 0.8, angle: 0 }, { time: endT, x: 0.5, y: 0.8, angle: 0 }];
+            } else if (diff === 'NORMAL') {
+                NOTE_SPEED = 700; HIT_WINDOW = 0.2;
+                lineScript = [
+                    { time: 0, x: 0.5, y: 0.8, angle: 0 }, { time: SONG_LENGTH * 0.3, x: 0.5, y: 0.8, angle: 0 },
+                    { time: SONG_LENGTH * 0.35, x: 0.5, y: 0.5, angle: 0.2 }, { time: SONG_LENGTH * 0.45, x: 0.5, y: 0.5, angle: -0.2 },
+                    { time: SONG_LENGTH * 0.55, x: 0.5, y: 0.5, angle: Math.PI / 2 }, { time: SONG_LENGTH * 0.7, x: 0.5, y: 0.5, angle: Math.PI / 2 },
+                    { time: SONG_LENGTH * 0.75, x: 0.5, y: 0.8, angle: 0 }, { time: endT, x: 0.5, y: 0.8, angle: 0 }
+                ];
+            } else if (diff === 'HARD') {
+                NOTE_SPEED = 1000; HIT_WINDOW = 0.16;
+                lineScript = [
+                    { time: 0, x: 0.5, y: 0.5, angle: 0 }, { time: 2, x: 0.5, y: 0.2, angle: Math.PI },
+                    { time: SONG_LENGTH * 0.2, x: 0.5, y: 0.2, angle: Math.PI }, { time: SONG_LENGTH * 0.3, x: 0.2, y: 0.5, angle: Math.PI / 2 },
+                    { time: SONG_LENGTH * 0.45, x: 0.8, y: 0.5, angle: -Math.PI / 2 }, { time: SONG_LENGTH * 0.6, x: 0.5, y: 0.5, angle: Math.PI * 2 },
+                    { time: SONG_LENGTH * 0.75, x: 0.5, y: 0.8, angle: 0 }, { time: endT, x: 0.5, y: 0.8, angle: 0 }
+                ];
+            }
+        }
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                masterCompressor = audioCtx.createDynamicsCompressor();
+                masterCompressor.threshold.setValueAtTime(-15, audioCtx.currentTime); masterCompressor.knee.setValueAtTime(15, audioCtx.currentTime);
+                masterCompressor.ratio.setValueAtTime(12, audioCtx.currentTime); masterCompressor.attack.setValueAtTime(0.002, audioCtx.currentTime);
+                masterCompressor.release.setValueAtTime(0.25, audioCtx.currentTime);
+                let masterGain = audioCtx.createGain(); masterGain.gain.value = 0.6;
+                masterCompressor.connect(masterGain); masterGain.connect(audioCtx.destination);
+            }
+        }
+        function playHitSound(type) {
+            if (!audioCtx || isPaused || currentSong === '404') return;
+            const osc = audioCtx.createOscillator(); const gainNode = audioCtx.createGain();
+            osc.connect(gainNode); gainNode.connect(masterCompressor);
+            if (type === 'tap') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.05);
+                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+            }
+        }
+        function scheduleMelodyNote(time, freq, duration = 0.5, vol = 0.4) {
+            if (currentSong === '404') return;
+            let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+            osc.type = 'triangle'; osc.connect(gain); gain.connect(masterCompressor); osc.frequency.setValueAtTime(freq, time);
+            gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(vol, time + 0.02); gain.gain.setTargetAtTime(0, time + duration * 0.8, duration * 0.1);
+            osc.start(time); osc.stop(time + duration + 0.2); activeAudioNodes.push(osc);
+        }
+        function scheduleBassNote(time, freq, duration = 0.5) {
+            if (currentSong === '404') return;
+            let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+            osc.type = 'triangle'; osc.connect(gain); gain.connect(masterCompressor); osc.frequency.setValueAtTime(freq, time);
+            gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(0.4, time + 0.05); gain.gain.setTargetAtTime(0, time + duration * 0.8, 0.1);
+            osc.start(time); osc.stop(time + duration + 0.5); activeAudioNodes.push(osc);
+        }
+        function scheduleChord(time, freqs, duration = 1.0, vol = 0.15) {
+            if (currentSong === '404') return;
+            freqs.forEach(freq => {
+                let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+                osc.type = 'sine'; osc.connect(gain); gain.connect(masterCompressor); osc.frequency.setValueAtTime(freq, time);
+                gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(vol, time + duration * 0.3); gain.gain.setTargetAtTime(0, time + duration * 0.7, duration * 0.3);
+                osc.start(time); osc.stop(time + duration + 1.0); activeAudioNodes.push(osc);
+            });
+        }
+        function scheduleArpeggio(time, freqs, duration, speed = 0.15) {
+            if (currentSong === '404') return;
+            let count = Math.floor(duration / speed);
+            for (let i = 0; i < count; i++) {
+                let freq = freqs[i % freqs.length]; let noteTime = time + i * speed;
+                let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+                osc.type = 'sine'; osc.connect(gain); gain.connect(masterCompressor); osc.frequency.setValueAtTime(freq, noteTime);
+                gain.gain.setValueAtTime(0, noteTime); gain.gain.linearRampToValueAtTime(0.08, noteTime + 0.02); gain.gain.setTargetAtTime(0, noteTime + speed * 0.5, 0.05);
+                osc.start(noteTime); osc.stop(noteTime + speed); activeAudioNodes.push(osc);
+            }
+        }
+        function scheduleKick(time) {
+            if (currentSong === '404') return;
+            let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(masterCompressor);
+            osc.frequency.setValueAtTime(150, time); osc.frequency.exponentialRampToValueAtTime(30, time + 0.15);
+            gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(0.6, time + 0.01); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
+            osc.start(time); osc.stop(time + 0.3); activeAudioNodes.push(osc);
+        }
+        function playWhiteNoise(time, duration) {
+            let bufferSize = audioCtx.sampleRate * duration; let buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            let data = buffer.getChannelData(0); for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            let noise = audioCtx.createBufferSource(); noise.buffer = buffer; let gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.05, time); noise.connect(gain); gain.connect(masterCompressor); noise.start(time); activeAudioNodes.push(noise);
+        }
+
+        class Note {
+            constructor(time, lane, type, duration = 0) {
+                this.time = time; this.lane = lane; this.type = type; this.duration = duration;
+                this.hit = false; this.missed = false; this.isHolding = false;
+            }
+        }
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y; this.vx = (Math.random() - 0.5) * 600; this.vy = (Math.random() - 0.5) * 600;
+                this.life = 1.0; this.color = color; this.size = Math.random() * 6 + 2;
+            }
+            update(dt) { this.x += this.vx * dt; this.y += this.vy * dt; this.life -= dt * 2; }
+            draw(ctx) { ctx.globalAlpha = Math.max(0, this.life); ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1.0; }
+        }
+
+        function generateChartAndMusic() {
+            notes = []; activeAudioNodes.forEach(node => { try { node.stop(); } catch(e){} }); activeAudioNodes = [];
+            if (currentSong === 'ELISE') { SONG_LENGTH = 34; generateElise(); }
+            else if (currentSong === 'RANDOM') { SONG_LENGTH = 32; generateRandomTrack(); }
+            else if (currentSong === '404') { SONG_LENGTH = 20; generateTrack404(); }
+            setDifficulty(currentDifficulty); totalNotes = notes.length;
+        }
+
+        function generateElise() {
+            const elisePhrase = [
+                [0.0, 3, 'tap', 0, 659.25], [0.2, 2, 'tap', 0, 622.25], [0.4, 3, 'tap', 0, 659.25], [0.6, 2, 'tap', 0, 622.25], [0.8, 3, 'tap', 0, 659.25],
+                [1.0, 1, 'tap', 0, 493.88], [1.2, 2, 'tap', 0, 587.33], [1.4, 1, 'tap', 0, 523.25], [1.6, 0, 'hold', 0.8, 440.0],
+                [2.6, 0, 'tap', 0, 261.63], [2.8, 1, 'tap', 0, 329.63], [3.0, 2, 'tap', 0, 440.0], [3.2, 3, 'hold', 0.8, 493.88],
+                [4.2, 1, 'tap', 0, 329.63], [4.4, 2, 'tap', 0, 415.30], [4.6, 3, 'tap', 0, 493.88], [4.8, 0, 'hold', 0.8, 523.25],
+                [5.8, 3, 'tap', 0, 659.25], [6.0, 2, 'tap', 0, 622.25], [6.2, 3, 'tap', 0, 659.25], [6.4, 2, 'tap', 0, 622.25],
+                [6.6, 3, 'tap', 0, 659.25], [6.8, 1, 'tap', 0, 493.88], [7.0, 2, 'tap', 0, 587.33], [7.2, 1, 'tap', 0, 523.25],
+                [7.4, 0, 'hold', 0.8, 440.0], [8.4, 0, 'tap', 0, 261.63], [8.6, 1, 'tap', 0, 329.63], [8.8, 2, 'tap', 0, 523.25],
+                [9.0, 1, 'hold', 0.8, 493.88], [10.0, 0, 'hold', 1.0, 440.0]
+            ];
+            const harmony = [
+                [1.6, [110, 164.81, 220, 261.63], 1.0], [3.2, [82.41, 123.47, 164.81, 196.00], 1.0],
+                [4.8, [110, 164.81, 220, 261.63], 1.0], [7.4, [110, 164.81, 220, 261.63], 1.0],
+                [9.0, [82.41, 123.47, 164.81, 196.00], 1.0], [10.0, [110, 164.81, 220, 261.63], 1.0]
+            ];
+            for (let loop = 0; loop < 3; loop++) {
+                let offset = 2.0 + loop * 11.0;
+                for (let i = 0; i < elisePhrase.length; i++) {
+                    let n = elisePhrase[i]; notes.push(new Note(offset + n[0], n[1], n[2], n[3]));
+                    scheduleMelodyNote(offset + n[0] + audioStartTime, n[4], n[2] === 'hold' ? n[3] : 0.15);
+                }
+                harmony.forEach(h => {
+                    let pTime = offset + h[0] + audioStartTime;
+                    scheduleArpeggio(pTime, h[1], h[2], 0.125); scheduleBassNote(pTime, h[1][0]/2, h[2]); scheduleChord(pTime, h[1], h[2], 0.15);
+                });
+                if (currentDifficulty === 'HARD') {
+                    for (let b = 0; b < 11.0; b += 0.8) { scheduleKick(offset + b + audioStartTime); notes.push(new Note(offset + b + 0.05, Math.floor(Math.random() * 4), 'tap')); }
+                }
+            }
+        }
+
+        function generateRandomTrack() {
+            let startDelay = 2.0; let beatSec = 0.5; let scale = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25];
+            for (let beat = 0; beat < 60; beat++) {
+                let time = startDelay + beat * beatSec;
+                if (beat % 4 === 0) {
+                    let roots = [130.81, 174.61, 196.00, 220.00]; let root = roots[Math.floor(Math.random() * roots.length)]; let arpScale = [root, root * 1.25, root * 1.5, root * 2];
+                    scheduleArpeggio(time + audioStartTime, arpScale, beatSec * 4, beatSec / 2); scheduleChord(time + audioStartTime, [root, root * 1.25, root * 1.5], beatSec * 4, 0.08); scheduleBassNote(time + audioStartTime, root / 2, beatSec * 2);
+                }
+                if (beat % 2 === 0) notes.push(new Note(time, Math.floor(Math.random() * 2), 'tap'));
+                let prob = currentDifficulty === 'EASY' ? 0.3 : (currentDifficulty === 'NORMAL' ? 0.5 : 0.7);
+                if (Math.random() < prob) {
+                    let freq = scale[Math.floor(Math.random() * scale.length)]; let lane = Math.floor(Math.random() * 2) + 2;
+                    if (Math.random() < 0.3 && beat < 58) { let dur = beatSec * (Math.random() > 0.5 ? 1 : 2); notes.push(new Note(time, lane, 'hold', dur)); scheduleMelodyNote(time + audioStartTime, freq, dur, 0.2);
+                    } else { notes.push(new Note(time + (Math.random() > 0.7 ? beatSec/2 : 0), lane, 'tap')); scheduleMelodyNote(time + (Math.random() > 0.7 ? beatSec/2 : 0) + audioStartTime, freq, 0.3, 0.2); }
+                }
+            }
+        }
+
+        function generateTrack404() {
+            playWhiteNoise(audioStartTime, SONG_LENGTH + 2);
+            for (let t = 2; t < SONG_LENGTH; t += 0.2) if (Math.random() > 0.5) notes.push(new Note(t, Math.floor(Math.random() * 4), Math.random() > 0.8 ? 'hold' : 'tap', Math.random()*0.5));
+        }
+
+        function showHitFeedback(text, color) {
+            if(currentSong === '404') { text = Math.random()>0.5 ? 'ERROR' : 'NULL'; color='#444'; }
+            hitFeedbackEl.innerText = text; hitFeedbackEl.style.color = color; hitFeedbackEl.style.textShadow = `0 0 10px ${color}, 0 0 30px ${color}`;
+            hitFeedbackEl.style.transition = 'none'; hitFeedbackEl.style.opacity = '1'; hitFeedbackEl.style.transform = 'translate(-50%, -50%) scale(1.3)';
+            void hitFeedbackEl.offsetWidth; hitFeedbackEl.style.transition = 'all 0.3s ease-out'; hitFeedbackEl.style.opacity = '0'; hitFeedbackEl.style.transform = 'translate(-50%, -50%) scale(1)';
+        }
+
+        function updateScore(points) { score += points; scoreEl.innerText = score.toString().padStart(7, '0'); }
+        function addCombo() { combo++; if (combo > maxCombo) maxCombo = combo; comboEl.innerHTML = `${combo}<br><span id="comboText">COMBO</span>`; comboEl.classList.add('active'); hitNotes++; updateAccuracy(); }
+        function breakCombo() { if (combo > 0) { combo = 0; comboEl.classList.remove('active'); showHitFeedback('MISS', '#ff0044'); updateAccuracy(); } }
+        function updateAccuracy() { let acc = hitNotes / totalNotes * 100; if (acc > 100) acc = 100; accEl.innerText = (hitNotes === 0 ? "100.00" : acc.toFixed(2)) + '%'; }
+
+        function showCreepyText() { if (Math.random() < 0.25) { let ct = document.getElementById('creepyText'); ct.style.transition = 'opacity 3s ease-in'; ct.style.opacity = '0.8'; } }
+        function hideCreepyText() { let ct = document.getElementById('creepyText'); ct.style.transition = 'opacity 0.3s ease-out'; ct.style.opacity = '0'; }
+
+        function togglePause() {
+            if (!isPlaying || isEnding) return;
+            if (isPauseShattering) return;
+            if (!isPaused) {
+                if (Math.random() < 0.4) {
+                    isPauseShattering = true;
+                    let pm = document.getElementById('pauseMenu'), pTitle = document.getElementById('pauseTitle'), pBtns = document.getElementById('pauseBtns'), noTxt = document.getElementById('noPauseText');
+                    pm.style.display = 'flex'; pTitle.style.display = 'none'; pBtns.style.display = 'none';
+                    noTxt.style.display = 'block'; noTxt.style.opacity = '1';
+                    pm.classList.add('fall-down');
+                    pm.style.pointerEvents = 'none';
+
+                    setTimeout(() => {
+                        noTxt.style.opacity = '0';
+                        setTimeout(() => {
+                            pm.classList.remove('fall-down'); pm.style.display = 'none';
+                            pTitle.style.display = 'block'; pBtns.style.display = 'flex';
+                            noTxt.style.display = 'none'; isPauseShattering = false;
+                            pm.style.pointerEvents = 'auto';
+                        }, 500);
+                    }, 1200);
+                    return;
+                }
+                isPaused = true; pauseMenu.style.display = 'flex'; audioCtx.suspend(); showCreepyText();
+            } else { isPaused = false; pauseMenu.style.display = 'none'; audioCtx.resume(); hideCreepyText(); }
+        }
+
+        function restartGame() {
+            stopMatrix(); hideCreepyText(); pauseMenu.style.display = 'none'; resultScreen.style.display = 'none'; isPaused = false;
+            activeAudioNodes.forEach(node => { try { node.stop(); } catch(e){} }); if (audioCtx) audioCtx.resume(); startGame(true);
+        }
+
+        function goToMenu(fromPause) {
+            stopMatrix(); hideCreepyText(); pauseMenu.style.display = 'none'; resultScreen.style.display = 'none'; isPaused = false; isPlaying = false; isEnding = false;
+            activeAudioNodes.forEach(node => { try { node.stop(); } catch(e){} }); if (audioCtx) audioCtx.resume();
+            checkGhostTrack();
+
+            if(hasLoadedOnce) {
+                document.getElementById('easterEggBtn').style.display = 'flex';
+            }
+
+            if (fromPause && gameTime > 0 && gameTime < 5) {
+                let ms = document.getElementById('mockingScreen'); ms.style.display = 'flex';
+                setTimeout(() => { ms.style.display = 'none'; canvas.style.opacity = '1'; document.getElementById('uiLayer').style.opacity = '1'; startScreen.style.display = 'flex'; }, 1500);
+            } else { canvas.style.opacity = '1'; document.getElementById('uiLayer').style.opacity = '1'; startScreen.style.display = 'flex'; }
+        }
+
+        document.getElementById('btnGoMenu').addEventListener('mouseover', function() {
+            if (isMenuBtnCursed && Math.random() < 0.7) {
+                let rx = (Math.random() - 0.5) * 500; let ry = (Math.random() - 0.5) * 300;
+                this.style.transform = `translate(${rx}px, ${ry}px)`;
+            }
+        });
+
+        function handleInputDown(lane) {
+            if (!isPlaying || isPaused) return;
+            keys[lane] = true;
+            let hitNote = null; let minDiff = 999;
+            for (let note of notes) {
+                if (note.lane === lane && !note.hit && !note.missed) { let diff = Math.abs(gameTime - note.time); if (diff < HIT_WINDOW && diff < minDiff) { minDiff = diff; hitNote = note; } }
+            }
+            if (hitNote) {
+                if (minDiff < HIT_WINDOW * 0.4) { showHitFeedback('PERFECT', '#ffff00'); updateScore(1000); } else { showHitFeedback('GREAT', '#00ffff'); updateScore(500); }
+                addCombo(); playHitSound('tap'); spawnParticles(lane, '#0ff');
+                if (hitNote.type === 'tap') hitNote.hit = true; else if (hitNote.type === 'hold') { hitNote.isHolding = true; activeHolds[lane] = hitNote; }
+            }
+        }
+        function handleInputUp(lane) {
+            keys[lane] = false;
+            let holdNote = activeHolds[lane];
+            if (holdNote && holdNote.isHolding) {
+                holdNote.isHolding = false; activeHolds[lane] = null; let endTime = holdNote.time + holdNote.duration;
+                if (gameTime < endTime - HIT_WINDOW) { holdNote.missed = true; breakCombo(); } else { holdNote.hit = true; updateScore(500); }
+            }
+        }
+
+        function spawnParticles(lane, customColor) {
+            for (let i = 0; i < (currentDifficulty === 'HARD' ? 25 : 15); i++) particles.push(new Particle((lane - 1.5) * LANE_WIDTH, 0, customColor || '#0ff'));
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') togglePause(); let key = e.code ? e.code.replace('Key', '').toLowerCase() : e.key.toLowerCase();
+            if (keyMap[key] !== undefined && !keys[keyMap[key]]) handleInputDown(keyMap[key]);
+        });
+        window.addEventListener('keyup', (e) => {
+            let key = e.code ? e.code.replace('Key', '').toLowerCase() : e.key.toLowerCase(); if (keyMap[key] !== undefined) handleInputUp(keyMap[key]);
+        });
+        document.getElementById('pauseBtn').addEventListener('click', (e) => { e.stopPropagation(); togglePause(); });
+
+        function update(dt) {
+            if (!isPlaying || isPaused) return;
+            gameTime = audioCtx.currentTime - audioStartTime;
+
+            for (let i = 0; i < lineScript.length - 1; i++) {
+                let current = lineScript[i], next = lineScript[i+1];
+                if (gameTime >= current.time && gameTime < next.time) {
+                    let progress = (gameTime - current.time) / (next.time - current.time);
+                    let ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+                    judgeLine.x = width * (current.x + (next.x - current.x) * ease);
+                    judgeLine.y = height * (current.y + (next.y - current.y) * ease);
+                    judgeLine.angle = current.angle + (next.angle - current.angle) * ease;
+                    break;
+                }
+            }
+
+            for (let note of notes) {
+                if (!note.hit && !note.missed) {
+                    if (note.type === 'tap' && gameTime > note.time + HIT_WINDOW) { note.missed = true; breakCombo(); }
+                    else if (note.type === 'hold' && !note.isHolding && gameTime > note.time + HIT_WINDOW) { note.missed = true; breakCombo(); }
+                }
+                if (note.isHolding) {
+                    updateScore(10); if (Math.random() > 0.5) particles.push(new Particle((note.lane - 1.5) * LANE_WIDTH, 0, '#f0f'));
+                    if (gameTime >= note.time + note.duration) {
+                        note.isHolding = false; note.hit = true; activeHolds[note.lane] = null; showHitFeedback('PERFECT', '#ffff00'); updateScore(500);
+                    }
+                }
+            }
+            for (let i = particles.length - 1; i >= 0; i--) { particles[i].update(dt); if (particles[i].life <= 0) particles.splice(i, 1); }
+        }
+
+        function draw() {
+            ctx.fillStyle = 'rgba(5, 5, 16, 0.4)'; ctx.fillRect(0, 0, width, height);
+            if (!isPlaying) return;
+
+            if (currentSong === '404' && Math.random() > 0.8) { ctx.fillStyle = `rgba(255,255,255,${Math.random()*0.1})`; ctx.fillRect(Math.random()*width, Math.random()*height, Math.random()*200, Math.random()*200); }
+
+            ctx.save(); ctx.translate(width/2, height/2); ctx.rotate(judgeLine.angle * 0.1);
+            ctx.strokeStyle = currentDifficulty === 'HARD' ? 'rgba(255, 0, 0, 0.05)' : 'rgba(0, 255, 255, 0.05)';
+            ctx.beginPath(); for(let i = -width; i < width; i += 50) { ctx.moveTo(i, -height); ctx.lineTo(i, height); ctx.moveTo(-width, i); ctx.lineTo(width, i); } ctx.stroke(); ctx.restore();
+            ctx.save(); ctx.translate(judgeLine.x, judgeLine.y); ctx.rotate(judgeLine.angle);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.02)'; ctx.fillRect(-LANE_WIDTH * 2, -height * 2, LANE_WIDTH * 4, height * 4);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; ctx.beginPath(); for (let i = -2; i <= 2; i++) { ctx.moveTo(i * LANE_WIDTH, -height * 2); ctx.lineTo(i * LANE_WIDTH, height * 2); } ctx.stroke();
+
+            let glowColor = currentDifficulty === 'HARD' ? 'rgba(255, 0, 0, 0.4)' : 'rgba(0, 255, 255, 0.4)';
+            let isHardMode = (currentDifficulty === 'HARD' || currentSong === '404');
+
+            for (let i = 0; i < 4; i++) {
+                if (keys[i]) {
+                    let grad = ctx.createLinearGradient(0, 0, 0, -500);
+                    grad.addColorStop(0, glowColor); grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                    ctx.fillStyle = grad; ctx.fillRect((i - 2) * LANE_WIDTH, -height, LANE_WIDTH, height * 2);
+                }
+            }
+
+            let lineColor = isHardMode ? '#f00' : '#0ff';
+            ctx.shadowBlur = 20; ctx.shadowColor = lineColor; ctx.strokeStyle = lineColor; ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.moveTo(-LANE_WIDTH * 2.5, 0); ctx.lineTo(LANE_WIDTH * 2.5, 0); ctx.stroke(); ctx.shadowBlur = 0;
+
+            ctx.font = 'bold 22px Orbitron'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            let keyChars = ['F', 'G', 'H', 'J'];
+            let hintColor = isHardMode ? 'rgba(255, 0, 0, 0.4)' : 'rgba(0, 255, 255, 0.4)';
+            let activeColor = isHardMode ? '#f00' : '#0ff';
+
+            for (let i = 0; i < 4; i++) {
+                let keyX = (i - 1.5) * LANE_WIDTH;
+                let keyY = 40;
+
+                ctx.strokeStyle = keys[i] ? activeColor : hintColor;
+                ctx.lineWidth = keys[i] ? 3 : 2;
+                ctx.strokeRect(keyX - 25, keyY - 20, 50, 40);
+
+                if (keys[i]) {
+                    ctx.fillStyle = isHardMode ? 'rgba(255,0,0,0.3)' : 'rgba(0,255,255,0.3)';
+                    ctx.fillRect(keyX - 25, keyY - 20, 50, 40);
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = activeColor;
+                } else {
+                    ctx.shadowBlur = 0;
+                }
+
+                ctx.fillStyle = keys[i] ? '#fff' : hintColor;
+                ctx.fillText(keyChars[i], keyX, keyY);
+                ctx.shadowBlur = 0;
+            }
+
+            ctx.globalCompositeOperation = 'lighter';
+            for (let note of notes) {
+                if (note.hit || note.missed) continue;
+                let y = -(note.time - gameTime) * NOTE_SPEED; let x = (note.lane - 1.5) * LANE_WIDTH;
+                if (y < -height || y > height) continue;
+                if (note.type === 'tap') {
+                    ctx.fillStyle = lineColor; ctx.shadowBlur = 15; ctx.shadowColor = lineColor;
+                    ctx.fillRect(x - LANE_WIDTH/2 + 5, y - 10, LANE_WIDTH - 10, 20); ctx.fillStyle = '#fff'; ctx.fillRect(x - LANE_WIDTH/2 + 15, y - 3, LANE_WIDTH - 30, 6);
+                } else if (note.type === 'hold') {
+                    let length = note.duration * NOTE_SPEED; let drawY = note.isHolding ? 0 : y;
+                    let drawLength = note.isHolding ? Math.max(0, length - (gameTime - note.time) * NOTE_SPEED) : length;
+                    ctx.fillStyle = 'rgba(255, 0, 255, 0.6)'; ctx.shadowBlur = 10; ctx.shadowColor = '#f0f';
+                    ctx.fillRect(x - LANE_WIDTH/2 + 10, drawY - drawLength, LANE_WIDTH - 20, drawLength);
+                    ctx.strokeStyle = '#f0f'; ctx.lineWidth = 3; ctx.strokeRect(x - LANE_WIDTH/2 + 10, drawY - drawLength, LANE_WIDTH - 20, drawLength);
+                    ctx.fillStyle = '#fff'; ctx.fillRect(x - LANE_WIDTH/2 + 5, drawY - 10, LANE_WIDTH - 10, 20);
+                }
+                ctx.shadowBlur = 0;
+            }
+            for (let p of particles) p.draw(ctx);
+            ctx.globalCompositeOperation = 'source-over'; ctx.restore();
+
+            if (gameTime > SONG_LENGTH + 2 && !isEnding) {
+                isEnding = true;
+                canvas.style.opacity = '0'; document.getElementById('uiLayer').style.opacity = '0';
+                showCreepyText();
+
+                setTimeout(() => {
+                    isPlaying = false; resultScreen.style.display = 'flex';
+
+                    let displayDiff = currentDifficulty === 'HARD' ? 'CHAOS' : currentDifficulty;
+
+                    document.getElementById('resultDetails').innerHTML = `
+                        <div id="finalScoreText" style="font-size: 4rem; color: #0ff; margin-bottom: 30px; font-weight: 900; text-shadow: 0 0 20px #0ff, 0 0 40px #0ff; letter-spacing: 5px;">
+                            ${score.toString().padStart(7, '0')}
+                        </div>
+                        <div style="text-align: left; display: inline-block; font-size: 1.3rem; line-height: 2.5; margin-bottom: 40px; background: rgba(0, 0, 0, 0.6); padding: 25px 50px; border-radius: 15px; border: 1px solid rgba(0, 255, 255, 0.3); box-shadow: inset 0 0 20px rgba(0, 255, 255, 0.1);">
+                            <div style="display: flex; justify-content: space-between; width: 280px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                                <span style="color: #ccc;">難度:</span><span style="color: #0ff; font-weight: bold; text-shadow: 0 0 10px #0ff;">${displayDiff}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; width: 280px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                                <span style="color: #ccc;">最大連擊:</span><span style="color: #f0f; font-weight: bold; text-shadow: 0 0 10px #f0f;">${maxCombo}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; width: 280px;">
+                                <span style="color: #ccc;">準確率:</span><span style="color: #fff; font-weight: bold; text-shadow: 0 0 10px #fff;">${accEl.innerText}</span>
+                            </div>
+                        </div>
+                    `;
+                    activeAudioNodes.forEach(node => { try { node.stop(); } catch(e){} });
+
+                    matrixTimeout = setTimeout(() => {
+                        startMatrix();
+                        glitchScoreInterval = setInterval(() => {
+                            let text = ''; for(let i=0; i<7; i++) text += letters.charAt(Math.floor(Math.random() * letters.length));
+                            document.getElementById('finalScoreText').innerText = text;
+                            document.getElementById('finalScoreText').style.color = '#0f0';
+                            document.getElementById('finalScoreText').style.textShadow = '0 0 20px #0f0';
+                        }, 50);
+                    }, 5000);
+
+                }, 1000);
+            }
+        }
+
+        function gameLoop(timestamp) {
+            let dt = (timestamp - lastTime) / 1000; lastTime = timestamp; if (dt > 0.1) dt = 0.1;
+            update(dt); draw(); requestAnimationFrame(gameLoop);
+        }
+
+        async function playIntro() {
+            const showText = (text, duration) => new Promise(resolve => {
+                introText.style.transition = 'opacity 1s ease-in-out, transform 0s'; introText.style.transform = 'scale(1)';
+                introText.innerText = text; introText.style.opacity = '1';
+                setTimeout(() => { introText.style.opacity = '0'; setTimeout(resolve, 1000); }, duration);
+            });
+            await new Promise(r => setTimeout(r, 500));
+            await showText('你知道這是什麼嗎', 2000); await showText('你不知道', 2000); await showText('所以我也沒打算告訴你', 2500);
+            await new Promise(r => setTimeout(r, 800));
+
+            introText.style.transition = 'opacity 0.5s, transform 4s linear'; introText.style.transform = 'scale(0.8)';
+            introText.innerText = '哈'; introText.style.opacity = '1'; setTimeout(() => { introText.style.transform = 'scale(1.5)'; }, 50);
+            await new Promise(r => setTimeout(r, 700)); introText.innerText = '哈  哈';
+            await new Promise(r => setTimeout(r, 700)); introText.innerText = '哈  哈  哈';
+            await new Promise(r => setTimeout(r, 2000));
+            introText.style.transition = 'opacity 1s ease-in-out'; introText.style.opacity = '0';
+            await new Promise(r => setTimeout(r, 1000));
+
+            checkGhostTrack();
+            startScreen.style.display = 'flex'; introScreen.style.opacity = '0';
+            setTimeout(() => { introScreen.style.display = 'none'; }, 1000);
+        }
+
+        window.initGame = function(diff) {
+            initAudio();
+            const songSelectEl = document.getElementById('songSelect'); if (songSelectEl) currentSong = songSelectEl.value;
+            setDifficulty(diff);
+
+            if (!hasLoadedOnce) {
+                startScreen.style.display = 'none';
+                let permBox = document.getElementById('fakePermissionBox');
+                permBox.style.display = 'flex';
+                let permHandled = false;
+
+                const handlePerm = (trollText, showClown) => {
+                    if(permHandled) return; permHandled = true;
+                    document.getElementById('permHeader').style.display = 'none';
+                    document.getElementById('permBtns').style.display = 'none';
+
+                    let troll = document.getElementById('permTroll');
+                    document.getElementById('trollText').innerText = trollText;
+                    if(showClown) {
+                        document.getElementById('trollImage').style.display = 'block';
+                    }
+                    troll.style.display = 'block';
+
+                    setTimeout(() => {
+                        permBox.style.display = 'none';
+
+                        const foodQuestions = [
+                            {
+                                q: "吃咖哩飯的時候，你會不會拌在一起？",
+                                opts: ["當然要拌！", "絕對不拌！"],
+                                reply: (ans) => ans === "當然要拌！" ? "錯！你是邪教嗎！" : "不懂吃！咖哩飯就是要拌！"
+                            },
+                            {
+                                q: "吃火鍋的時候，要不要加芋頭？",
+                                opts: ["加爆！化在湯裡", "絕對不加！邪教"],
+                                reply: (ans) => ans === "加爆！化在湯裡" ? "噁心！火鍋加芋頭根本是破壞湯底！" : "蛤！芋頭化在湯裡才是精華！"
+                            },
+                            {
+                                q: "南部粽好還是北部粽好？",
+                                opts: ["南部粽 (水煮)", "北部粽 (3D油飯)"],
+                                reply: (ans) => "我怎麼聽說是消波塊！?"
+                            }
+                        ];
+
+                        let lastQIndex = -1;
+                        const loadQuestion = () => {
+                            let newIndex;
+                            do {
+                                newIndex = Math.floor(Math.random() * foodQuestions.length);
+                            } while (newIndex === lastQIndex && foodQuestions.length > 1);
+
+                            lastQIndex = newIndex;
+                            let currentQ = foodQuestions[newIndex];
+
+                            document.getElementById('reTaskText').innerText = currentQ.q;
+
+                            let optionsHtml = '';
+                            currentQ.opts.forEach(opt => {
+                                optionsHtml += `<button class="re-opt-btn">${opt}</button>`;
+                            });
+                            document.getElementById('reOptions').innerHTML = optionsHtml;
+                            document.getElementById('reOptions').style.display = 'flex';
+                            document.getElementById('reHeader').style.display = 'block';
+                            document.getElementById('reFooter').style.display = 'flex';
+                            document.getElementById('reMockText').style.display = 'none';
+
+                            document.querySelectorAll('.re-opt-btn').forEach(btn => {
+                                btn.onclick = function() {
+                                    let ans = this.innerText;
+                                    let trollReply = currentQ.reply(ans);
+
+                                    document.getElementById('reOptions').style.display = 'none';
+                                    document.getElementById('reHeader').style.display = 'none';
+                                    document.getElementById('reFooter').style.display = 'none';
+
+                                    let mockTxt = document.getElementById('reMockText');
+                                    mockTxt.style.display = 'block';
+                                    mockTxt.innerHTML = `${trollReply}`;
+
+                                    setTimeout(() => {
+                                        document.getElementById('fakeRecaptcha').style.display = 'none';
+
+                                        hasLoadedOnce = true;
+                                        document.getElementById('easterEggBtn').style.display = 'flex';
+
+                                        let ls = document.getElementById('fakeLoadingScreen'), ltext = document.getElementById('loadingText'), lbar = document.getElementById('loadingBar');
+                                        ls.style.display = 'flex'; ltext.innerText = '載入音樂中...'; lbar.style.width = '30%';
+
+                                        setTimeout(() => {
+                                            ltext.innerText = '正在下載玩家指紋...'; lbar.style.width = '80%';
+                                            setTimeout(() => {
+                                                ltext.innerText = '騙你的，開始！'; lbar.style.width = '100%';
+                                                setTimeout(() => {
+                                                    ls.style.display = 'none';
+                                                    if (audioCtx.state === 'suspended') audioCtx.resume().then(() => startGame()); else startGame();
+                                                }, 800);
+                                            }, 1000);
+                                        }, 1000);
+                                    }, 2500);
+                                };
+                            });
+                        };
+
+                        loadQuestion();
+                        let reBox = document.getElementById('fakeRecaptcha');
+                        reBox.style.display = 'flex';
+                        document.getElementById('reRefresh').onclick = loadQuestion;
+
+                    }, 1500);
+                };
+
+                document.getElementById('btnAllow').onclick = () => handlePerm("已存取照片", true);
+                document.getElementById('btnDeny').onclick = () => handlePerm("我就知道你不敢。", false);
+
+            } else {
+                if (audioCtx.state === 'suspended') audioCtx.resume().then(() => startGame()); else startGame();
+            }
+        };
+
+        function startGame() {
+            startScreen.style.display = 'none'; resultScreen.style.display = 'none';
+            canvas.style.opacity = '1'; document.getElementById('uiLayer').style.opacity = '1';
+            isEnding = false; hideCreepyText(); document.activeElement.blur();
+
+            document.getElementById('btnGoMenu').style.transform = 'none';
+            isMenuBtnCursed = Math.random() < 0.5;
+
+            score = 0; combo = 0; maxCombo = 0; hitNotes = 0; gameTime = 0;
+            updateScore(0); accEl.innerText = "100.00%"; comboEl.classList.remove('active');
+            audioStartTime = audioCtx.currentTime;
+
+            generateChartAndMusic();
+            isPlaying = true; isPaused = false; lastTime = performance.now();
+        }
+
+        requestAnimationFrame(gameLoop);
+        playIntro();
+    </script>
+</body>
+</html>
