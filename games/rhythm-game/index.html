@@ -311,8 +311,8 @@
     <div id="startScreen" class="overlay" style="display: none;">
         <h1 id="mainTitle">RHYTHM</h1>
         <p class="inst">
-            鍵盤: F, G, H, J<br>
-            藍色音符：按一下 (Tap) | 紫色音符：長按 (Hold)
+            🖥️ 鍵盤: F, G, H, J &nbsp;｜&nbsp; 📱 手機: 點擊方塊<br>
+            藍色音符：點一下 (Tap) ｜ 紫色音符：長按 (Hold)
         </p>
         <div class="song-selector" id="songSelectorBox">
             <button class="song-btn selected" onclick="selectSong('ELISE', this)">給愛麗絲 (Synthwave)</button>
@@ -402,6 +402,27 @@
 
         const keys = { 0: false, 1: false, 2: false, 3: false };
         const keyMap = { 'f': 0, 'g': 1, 'h': 2, 'j': 3 };
+
+        const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+        const touchLaneMap = new Map(); // touchId → lane
+
+        function getTouchLane(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = width / rect.width;
+            const scaleY = height / rect.height;
+            const cx = (clientX - rect.left) * scaleX;
+            const cy = (clientY - rect.top) * scaleY;
+            const dx = cx - judgeLine.x;
+            const dy = cy - judgeLine.y;
+            const cosA = Math.cos(-judgeLine.angle);
+            const sinA = Math.sin(-judgeLine.angle);
+            const localX = dx * cosA - dy * sinA;
+            const localY = dx * sinA + dy * cosA;
+            // accept taps within ±200px vertically of judge line
+            if (localY < -200 || localY > 220) return -1;
+            const laneIdx = Math.round(localX / LANE_WIDTH + 1.5);
+            return (laneIdx >= 0 && laneIdx <= 3) ? laneIdx : -1;
+        }
 
         let notes = [], particles = [], activeHolds = { 0: null, 1: null, 2: null, 3: null };
         let judgeLine = { x: 0, y: 0, angle: 0 }, lineScript = [];
@@ -760,6 +781,34 @@
         });
         document.getElementById('pauseBtn').addEventListener('click', (e) => { e.stopPropagation(); togglePause(); });
 
+        // ── Touch support ──
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!isPlaying || isPaused) return;
+            Array.from(e.changedTouches).forEach(t => {
+                const lane = getTouchLane(t.clientX, t.clientY);
+                if (lane !== -1 && !touchLaneMap.has(t.identifier)) {
+                    touchLaneMap.set(t.identifier, lane);
+                    handleInputDown(lane);
+                }
+            });
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            Array.from(e.changedTouches).forEach(t => {
+                const lane = touchLaneMap.get(t.identifier);
+                if (lane !== undefined) { touchLaneMap.delete(t.identifier); handleInputUp(lane); }
+            });
+        }, { passive: false });
+
+        canvas.addEventListener('touchcancel', (e) => {
+            Array.from(e.changedTouches).forEach(t => {
+                const lane = touchLaneMap.get(t.identifier);
+                if (lane !== undefined) { touchLaneMap.delete(t.identifier); handleInputUp(lane); }
+            });
+        });
+
         function update(dt) {
             if (!isPlaying || isPaused) return;
             gameTime = audioCtx.currentTime - audioStartTime;
@@ -819,22 +868,37 @@
             ctx.shadowBlur = 20; ctx.shadowColor = lineColor; ctx.strokeStyle = lineColor; ctx.lineWidth = 4;
             ctx.beginPath(); ctx.moveTo(-LANE_WIDTH * 2.5, 0); ctx.lineTo(LANE_WIDTH * 2.5, 0); ctx.stroke(); ctx.shadowBlur = 0;
 
-            ctx.font = 'bold 22px Orbitron'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            let keyChars = ['F', 'G', 'H', 'J'];
             let hintColor = isHardMode ? 'rgba(255, 0, 0, 0.4)' : 'rgba(0, 255, 255, 0.4)';
             let activeColor = isHardMode ? '#f00' : '#0ff';
+            let keyChars = isTouchDevice ? ['1', '2', '3', '4'] : ['F', 'G', 'H', 'J'];
+            let kW = isTouchDevice ? 64 : 50;
+            let kH = isTouchDevice ? 64 : 40;
+            let keyY = isTouchDevice ? 50 : 40;
+            ctx.font = `bold ${isTouchDevice ? 26 : 22}px Orbitron`;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
             for (let i = 0; i < 4; i++) {
                 let keyX = (i - 1.5) * LANE_WIDTH;
-                let keyY = 40;
 
                 ctx.strokeStyle = keys[i] ? activeColor : hintColor;
                 ctx.lineWidth = keys[i] ? 3 : 2;
-                ctx.strokeRect(keyX - 25, keyY - 20, 50, 40);
+                if (isTouchDevice) {
+                    // rounded rect for touch
+                    ctx.beginPath();
+                    const rx = keyX - kW/2, ry = keyY - kH/2;
+                    ctx.roundRect(rx, ry, kW, kH, 10);
+                    ctx.stroke();
+                } else {
+                    ctx.strokeRect(keyX - kW/2, keyY - kH/2, kW, kH);
+                }
 
                 if (keys[i]) {
                     ctx.fillStyle = isHardMode ? 'rgba(255,0,0,0.3)' : 'rgba(0,255,255,0.3)';
-                    ctx.fillRect(keyX - 25, keyY - 20, 50, 40);
+                    if (isTouchDevice) {
+                        ctx.beginPath(); ctx.roundRect(keyX - kW/2, keyY - kH/2, kW, kH, 10); ctx.fill();
+                    } else {
+                        ctx.fillRect(keyX - kW/2, keyY - kH/2, kW, kH);
+                    }
                     ctx.shadowBlur = 10;
                     ctx.shadowColor = activeColor;
                 } else {
