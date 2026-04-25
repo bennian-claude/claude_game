@@ -182,6 +182,46 @@
       text-transform: uppercase;
     }
 
+    .intro-video-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 29;
+      display: none;
+      background: #000;
+    }
+
+    .intro-video-screen.is-active {
+      display: block;
+    }
+
+    .intro-video-screen video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+
+    .intro-skip {
+      position: absolute;
+      right: 24px;
+      bottom: 24px;
+      z-index: 2;
+      border: 1px solid rgba(255,255,255,0.55);
+      border-radius: 8px;
+      background: rgba(0,0,0,0.58);
+      color: #fff;
+      cursor: pointer;
+      padding: 0.8rem 1rem;
+      font: 900 0.72rem "Orbitron", monospace;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      backdrop-filter: blur(10px);
+    }
+
+    @media (max-width: 640px) {
+      .intro-skip { right: 14px; bottom: 14px; }
+    }
+
     /* ── Hero ── */
     .hero {
       width: 100%;
@@ -661,6 +701,11 @@
     <p>進入遊戲大廳</p>
     <button id="enterHubBtn" type="button">進入遊戲大廳</button>
   </div>
+</div>
+
+<div class="intro-video-screen" id="introVideoScreen">
+  <video id="zombieIntroVideo" src="assets/video/zombie-intro.mp4" preload="metadata" playsinline></video>
+  <button class="intro-skip" id="skipIntroVideoBtn" type="button">Skip</button>
 </div>
 
 <div class="page">
@@ -1350,14 +1395,34 @@ loadHomeLeaderboards();
   const btn = document.getElementById("musicToggle");
   const entryGate = document.getElementById("entryGate");
   const enterHubBtn = document.getElementById("enterHubBtn");
+  const introVideoScreen = document.getElementById("introVideoScreen");
+  const zombieIntroVideo = document.getElementById("zombieIntroVideo");
+  const skipIntroVideoBtn = document.getElementById("skipIntroVideoBtn");
   const bgm = new Audio("assets/audio/Toward_the_Silent_Sun.mp3");
   bgm.loop = true;
   bgm.preload = "metadata";
-  bgm.volume = 0.45;
+  const bgmVolume = 0.45;
+  bgm.volume = bgmVolume;
+  let introStarted = false;
+  let hubEntered = false;
+  let bgmUnlocked = false;
+
+  async function unlockBgmSilently() {
+    if (bgmUnlocked) return;
+    bgm.volume = 0;
+    try {
+      await bgm.play();
+      bgmUnlocked = true;
+    } catch (error) {
+      console.error("Unable to unlock background music", error);
+    }
+  }
 
   async function start() {
     try {
-      await bgm.play();
+      bgm.currentTime = 0;
+      bgm.volume = bgmVolume;
+      if (bgm.paused) await bgm.play();
       btn.classList.add("is-on");
       btn.setAttribute("aria-pressed", "true");
       btn.textContent = "Music On";
@@ -1369,24 +1434,67 @@ loadHomeLeaderboards();
 
   function stop() {
     bgm.pause();
+    bgm.volume = bgmVolume;
     btn.classList.remove("is-on");
     btn.setAttribute("aria-pressed", "false");
     btn.textContent = "Music Off";
   }
 
+  async function showHub() {
+    if (hubEntered) return;
+    hubEntered = true;
+    introVideoScreen.classList.remove("is-active");
+    zombieIntroVideo.pause();
+    zombieIntroVideo.currentTime = 0;
+    await start();
+  }
+
   async function enterHub() {
+    if (introStarted) return;
+    introStarted = true;
+    await unlockBgmSilently();
+    entryGate.classList.add("is-hidden");
+    introVideoScreen.classList.add("is-active");
+    try {
+      zombieIntroVideo.currentTime = 0;
+      await zombieIntroVideo.play();
+    } catch (error) {
+      console.error("Unable to play intro video", error);
+      showHub();
+    }
+  }
+
+  async function skipIntroVideo() {
+    await showHub();
+  }
+
+  zombieIntroVideo.addEventListener("ended", showHub);
+  skipIntroVideoBtn.addEventListener("click", skipIntroVideo);
+
+  async function enterHubFromGate() {
+    btn.textContent = "Music Off";
+    btn.classList.remove("is-on");
+    btn.setAttribute("aria-pressed", "false");
+    await enterHub();
+  }
+
+  async function enterHubDirectly() {
     await start();
     entryGate.classList.add("is-hidden");
   }
 
-  enterHubBtn.addEventListener("click", enterHub);
+  enterHubBtn.addEventListener("click", enterHubFromGate);
   entryGate.addEventListener("click", (event) => {
-    if (event.target === entryGate) enterHub();
+    if (event.target === entryGate) enterHubFromGate();
   });
 
   btn.addEventListener("click", () => {
     if (!bgm.paused) stop();
-    else start();
+    else {
+      entryGate.classList.add("is-hidden");
+      if (hubEntered) start();
+      else enterHubDirectly();
+    }
   });
 
   document.addEventListener("visibilitychange", () => {
