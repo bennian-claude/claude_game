@@ -79,8 +79,8 @@ const ZOMBIE_COUNT     = 4;
 const HUNTER_DURATION  = 8;
 const HUNTER_COOLDOWN  = 12;
 const PLAYER_SPEED     = 220;
-const ZOMBIE_SPEED     = 175;
-const ZOMBIE_HUNT_SPD  = 55;
+const ZOMBIE_SPEED     = 75;
+const ZOMBIE_HUNT_SPD  = 35;
 
 // ═══════════════════════════════════════════════════════
 //  STATE
@@ -111,17 +111,14 @@ function spawnEdge(z) {
   z.safeTime = 2.5; // 2.5s 入場保護：移向畫面中央，不計逃跑
 }
 
-// 開局用：在畫面內部隨機散佈，不從邊緣進入
+// 開局用：在中心環形區散佈，距中心 110~260px，遠離邊界
 function spawnInside(z) {
-  const margin = 60;
-  z.x = margin + Math.random() * (W - margin * 2);
-  z.y = margin + Math.random() * (H - margin * 2);
-  // 確保與玩家保持距離
-  const dx = z.x - W/2, dy = z.y - H/2;
-  if (Math.sqrt(dx*dx + dy*dy) < 90) {
-    z.x = (dx < 0 ? margin : W - margin);
-    z.y = (dy < 0 ? margin : H - margin);
-  }
+  const cx = W / 2, cy = H / 2;
+  const minR = 110, maxR = Math.min(W, H) * 0.38;
+  const angle = Math.random() * Math.PI * 2;
+  const r = minR + Math.random() * (maxR - minR);
+  z.x = Math.max(z.r + 10, Math.min(W - z.r - 10, cx + Math.cos(angle) * r));
+  z.y = Math.max(z.r + 10, Math.min(H - z.r - 10, cy + Math.sin(angle) * r));
   z.vx = 0; z.vy = 0;
   z.safeTime = 0;
 }
@@ -282,7 +279,7 @@ function updateZombie(z, dt) {
     if (z.y > H-z.r) { z.y = H-z.r; z.vy = -Math.abs(z.vy); }
   } else {
     // 逃出畫面 → 扣一條命
-    if (z.x < -65 || z.x > W+65 || z.y < -65 || z.y > H+65) {
+    if (z.x < -120 || z.x > W+120 || z.y < -120 || z.y > H+120) {
       lives--;
       burst(Math.max(4, Math.min(W-4, z.x)), Math.max(4, Math.min(H-4, z.y)), '#ff4444', 10);
       if (lives <= 0) { state = 'lose'; return; }
