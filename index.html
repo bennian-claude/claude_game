@@ -21,9 +21,11 @@
       --bg-dark: #07080d;
     }
 
-    html { background: var(--bg-dark); }
+    html { width: 100%; max-width: 100%; background: var(--bg-dark); }
 
     body {
+      width: 100%;
+      max-width: 100%;
       font-family: "Noto Sans TC", sans-serif;
       background:
         radial-gradient(circle at 18% 12%, rgba(255,176,0,0.14), transparent 28rem),
@@ -61,6 +63,8 @@
 
     .page {
       position: relative; z-index: 2;
+      width: 100%;
+      overflow-x: hidden;
       display: flex; flex-direction: column; align-items: center;
       padding: 1.25rem 1.25rem 4.5rem;
     }
@@ -236,6 +240,176 @@
       letter-spacing:0.2em; color:rgba(255,255,255,0.52); white-space:nowrap; text-transform:uppercase;
     }
 
+    /* ── Home Leaderboards ── */
+    .leaderboard-board {
+      width: 100%;
+      max-width: 1120px;
+      margin: 0 0 2rem;
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .section-heading h2 {
+      font-family: "Orbitron", monospace;
+      font-size: clamp(1.15rem, 3vw, 1.55rem);
+      color: var(--paper);
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .section-heading p {
+      color: rgba(255,255,255,0.45);
+      font-size: 0.86rem;
+      line-height: 1.6;
+      text-align: right;
+    }
+
+    .leaderboard-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+    }
+
+    .leaderboard-card {
+      position: relative;
+      overflow: hidden;
+      min-width: 0;
+      min-height: 17.25rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.085), rgba(255,255,255,0.03)),
+        rgba(6,8,13,0.82);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.24);
+    }
+
+    .leaderboard-card::before {
+      content: "";
+      position: absolute; inset: 0;
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--c-accent, var(--signal)) 18%, transparent), transparent 46%),
+        radial-gradient(circle at 90% 5%, color-mix(in srgb, var(--c-accent, var(--signal)) 22%, transparent), transparent 12rem);
+      pointer-events: none;
+    }
+
+    .leaderboard-head {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 1rem 1rem 0.75rem;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .leaderboard-title {
+      min-width: 0;
+    }
+
+    .leaderboard-title strong {
+      display: block;
+      color: #fff;
+      font-size: 1rem;
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .leaderboard-title span {
+      display: block;
+      margin-top: 0.25rem;
+      color: var(--c-accent, var(--signal));
+      font: 900 0.58rem "Orbitron", monospace;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .leaderboard-rank-badge {
+      flex: 0 0 auto;
+      width: 2.25rem;
+      height: 2.25rem;
+      display: grid;
+      place-items: center;
+      border: 1px solid color-mix(in srgb, var(--c-accent, var(--signal)) 62%, transparent);
+      border-radius: 8px;
+      color: #06100b;
+      background: var(--c-accent, var(--signal));
+      font: 900 0.78rem "Orbitron", monospace;
+      box-shadow: 0 0 22px color-mix(in srgb, var(--c-accent, var(--signal)) 32%, transparent);
+    }
+
+    .leaderboard-list {
+      position: relative;
+      display: grid;
+      gap: 0.5rem;
+      padding: 0.85rem 1rem 1rem;
+    }
+
+    .leaderboard-row {
+      display: grid;
+      grid-template-columns: 2rem minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 0.65rem;
+      min-height: 2rem;
+      padding: 0.42rem 0.55rem;
+      border: 1px solid rgba(255,255,255,0.075);
+      border-radius: 7px;
+      background: rgba(0,0,0,0.22);
+      min-width: 0;
+    }
+
+    .leaderboard-row:first-child {
+      border-color: color-mix(in srgb, var(--c-accent, var(--signal)) 48%, transparent);
+      background: color-mix(in srgb, var(--c-accent, var(--signal)) 13%, rgba(0,0,0,0.24));
+    }
+
+    .leaderboard-rank {
+      color: rgba(255,255,255,0.75);
+      font: 900 0.72rem "Orbitron", monospace;
+      text-align: center;
+    }
+
+    .leaderboard-name {
+      min-width: 0;
+      color: rgba(255,255,255,0.86);
+      font-size: 0.88rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .leaderboard-score {
+      color: var(--c-accent, var(--signal));
+      font: 900 0.84rem "Orbitron", monospace;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
+    .leaderboard-note {
+      color: rgba(255,255,255,0.42);
+      font-size: 0.76rem;
+      margin-top: -0.25rem;
+      padding-left: 2.65rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .leaderboard-state {
+      padding: 2.5rem 1rem;
+      color: rgba(255,255,255,0.48);
+      text-align: center;
+      font-size: 0.9rem;
+      line-height: 1.7;
+    }
+
     /* ── Game Grid ── */
     .game-grid {
       display: grid;
@@ -370,20 +544,49 @@
 
     @media (max-width: 760px) {
       .page { padding: 1rem 1rem 3rem; }
-      .topbar { align-items: flex-start; gap: 0.6rem; }
+      .topbar { align-items: flex-start; justify-content: flex-start; flex-wrap: wrap; gap: 0.6rem; }
       .brand { font-size: 0.68rem; }
       .brand-mark { width: 2rem; height: 2rem; }
       .music-toggle {
-        position: fixed;
-        top: 1.85rem;
-        right: 1rem;
-        z-index: 20;
+        position: static;
+        flex: 0 0 auto;
         padding: 0.7rem 0.78rem;
         font-size: 0.64rem;
+      }
+      .topbar,
+      .hero,
+      .divider,
+      .leaderboard-board,
+      .game-grid {
+        width: calc(100vw - 2rem);
+        max-width: calc(100vw - 2rem);
+      }
+      .hero-copy,
+      .hero-sub,
+      .hero-title {
+        max-width: 100%;
       }
       .hero { grid-template-columns: 1fr; padding-top: 2rem; }
       .hero-panel { min-height: 240px; }
       .hero-title { font-size: clamp(2.5rem, 15vw, 4.2rem); }
+      .section-heading { align-items: flex-start; flex-direction: column; }
+      .section-heading p { text-align: left; }
+      .leaderboard-grid { grid-template-columns: 1fr; }
+      .leaderboard-row {
+        grid-template-columns: 1.75rem minmax(0, 1fr);
+        gap: 0.45rem;
+      }
+      .leaderboard-score {
+        grid-column: 2;
+        font-size: 0.76rem;
+        text-align: left;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .leaderboard-note {
+        padding-left: 2.35rem;
+        font-size: 0.7rem;
+      }
       .game-grid { grid-template-columns: 1fr; }
       .card-art canvas { width: 44%; height: 44%; }
     }
@@ -419,6 +622,16 @@
       </div>
     </div>
   </header>
+
+  <div class="divider"><span>// live rankings</span></div>
+
+  <section class="leaderboard-board" aria-labelledby="leaderboardTitle">
+    <div class="section-heading">
+      <h2 id="leaderboardTitle">目前排行榜</h2>
+      <p>即時讀取各遊戲 Top 5，分數更新後重新整理首頁即可看到最新名次。</p>
+    </div>
+    <div class="leaderboard-grid" id="homeLeaderboards"></div>
+  </section>
 
   <div class="divider"><span>// choose your arena</span></div>
 
@@ -865,6 +1078,10 @@ function paintRhythm(canvas) {
 }
 </script>
 
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
 <!-- ══════════════════ GAME DATA + CARD BUILDER ══════════════════ -->
 <script>
 const games = [
@@ -876,6 +1093,7 @@ const games = [
     stars: "★★★★☆",
     url: "games/balloon-shooter/index.html",
     icon: "assets/images/balloon-aaa-icon.png",
+    collection: "balloon_shooter",
     painter: "balloon"
   },
   {
@@ -886,6 +1104,7 @@ const games = [
     stars: "★★★★★",
     url: "games/rhythm-game/index.html",
     icon: "assets/images/rhythm-aaa-icon.png",
+    collection: "rhythm_game",
     painter: "rhythm"
   },
   {
@@ -896,11 +1115,120 @@ const games = [
     stars: "★★★★☆",
     url: "games/zombie-hunter/index.html",
     icon: "assets/images/zombie-aaa-icon.png",
+    collection: "zombie_hunter",
     painter: "zombie"
   },
 ];
 
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCFVDsAvTx10-eshL3RYiSzyYlPFEvqyz8",
+  authDomain: "claude-code-project-3a0d3.firebaseapp.com",
+  projectId: "claude-code-project-3a0d3",
+  storageBucket: "claude-code-project-3a0d3.firebasestorage.app",
+  messagingSenderId: "451203824543",
+  appId: "1:451203824543:web:fa2e9bb8c2c0f69c339baa"
+};
+
 const grid = document.getElementById("gameGrid");
+const leaderboards = document.getElementById("homeLeaderboards");
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function formatScore(value) {
+  const n = Number(value || 0);
+  return Number.isFinite(n) ? n.toLocaleString("zh-TW") : "0";
+}
+
+function extraMeta(game, row) {
+  if (game.collection === "rhythm_game") {
+    const diff = row.difficulty ? `${row.difficulty}` : "";
+    const acc = row.accuracy ? ` · ${row.accuracy}` : "";
+    return `${diff}${acc}`;
+  }
+  if (game.collection === "zombie_hunter") {
+    return typeof row.kills === "number" ? `擊殺 ${row.kills}` : "";
+  }
+  return "";
+}
+
+function createLeaderboardShell(game, index) {
+  const card = document.createElement("article");
+  card.className = "leaderboard-card";
+  card.style.setProperty("--c-accent", game.accent);
+  card.innerHTML = `
+    <div class="leaderboard-head">
+      <div class="leaderboard-title">
+        <strong>${escapeHtml(game.name)}</strong>
+        <span>${escapeHtml(game.tag)} Top 5</span>
+      </div>
+      <div class="leaderboard-rank-badge">0${index + 1}</div>
+    </div>
+    <div class="leaderboard-list" data-board="${escapeHtml(game.collection)}">
+      <div class="leaderboard-state">載入排行榜中...</div>
+    </div>
+  `;
+  leaderboards.appendChild(card);
+}
+
+function renderLeaderboard(game, rows) {
+  const list = leaderboards.querySelector(`[data-board="${game.collection}"]`);
+  if (!list) return;
+  if (!rows.length) {
+    list.innerHTML = '<div class="leaderboard-state">還沒有紀錄，第一名等你來拿。</div>';
+    return;
+  }
+  const medals = ["1", "2", "3", "4", "5"];
+  list.innerHTML = rows.map((row, index) => {
+    const name = escapeHtml(row.name || "匿名玩家");
+    const score = formatScore(row.score);
+    const meta = escapeHtml(extraMeta(game, row));
+    return `
+      <div>
+        <div class="leaderboard-row">
+          <span class="leaderboard-rank">${medals[index]}</span>
+          <span class="leaderboard-name">${name}</span>
+          <span class="leaderboard-score">${score}</span>
+        </div>
+        ${meta ? `<div class="leaderboard-note">${meta}</div>` : ""}
+      </div>
+    `;
+  }).join("");
+}
+
+function renderLeaderboardError(game) {
+  const list = leaderboards.querySelector(`[data-board="${game.collection}"]`);
+  if (list) list.innerHTML = '<div class="leaderboard-state">排行榜暫時讀取失敗，請稍後再試。</div>';
+}
+
+async function loadHomeLeaderboards() {
+  games.forEach(createLeaderboardShell);
+  if (!window.firebase) {
+    games.forEach(renderLeaderboardError);
+    return;
+  }
+
+  if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+  const db = firebase.firestore();
+
+  await Promise.all(games.map(async (game) => {
+    try {
+      const snap = await db.collection(game.collection).orderBy("score", "desc").limit(5).get();
+      const rows = [];
+      snap.forEach((doc) => rows.push(doc.data()));
+      renderLeaderboard(game, rows);
+    } catch (error) {
+      console.error(`Failed to load ${game.collection}`, error);
+      renderLeaderboardError(game);
+    }
+  }));
+}
 
 games.forEach((g, i) => {
   const card = document.createElement("a");
@@ -945,6 +1273,8 @@ games.forEach((g, i) => {
     if(g.painter === "zombie")  paintZombieHunter(cvs);
   });
 });
+
+loadHomeLeaderboards();
 </script>
 
 <!-- ══════════════════ MUSIC CONTROLLER ══════════════════ -->
