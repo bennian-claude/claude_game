@@ -609,6 +609,24 @@
       letter-spacing: 0.01em; line-height: 1.2;
     }
     .card-desc { font-size: 0.86rem; color: rgba(255,255,255,0.58); line-height: 1.7; }
+    .card-changelog {
+      margin-top: 0.6rem; padding: 0.5rem 0.65rem;
+      background: rgba(255,255,255,0.04); border-radius: 6px;
+      border-left: 2px solid rgba(255,255,255,0.15);
+    }
+    .card-changelog-title {
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;
+      color: rgba(255,255,255,0.35); text-transform: uppercase; margin-bottom: 0.3rem;
+    }
+    .card-changelog-item {
+      display: flex; align-items: baseline; gap: 0.4rem;
+      font-size: 0.75rem; color: rgba(255,255,255,0.55); line-height: 1.5;
+    }
+    .card-changelog-ver {
+      font-size: 0.65rem; font-weight: 700; padding: 1px 5px;
+      border-radius: 3px; background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.5); white-space: nowrap; flex-shrink: 0;
+    }
     .card-footer {
       display: flex; align-items: center; justify-content: space-between;
       margin-top: 0.75rem; padding-top: 0.85rem;
@@ -1206,7 +1224,10 @@ const games = [
     url: "games/balloon-shooter/index.html",
     icon: "assets/images/balloon-aaa-icon.png",
     collection: "balloon_shooter",
-    painter: "balloon"
+    painter: "balloon",
+    changelog: [
+      { ver: "v1.0.1", text: "新增 ❄️ 凍結道具 — 撿到後氣球靜止 5 秒" },
+    ]
   },
   {
     name: "Rhythm 節奏",
@@ -1217,7 +1238,10 @@ const games = [
     url: "games/rhythm-game/index.html",
     icon: "assets/images/rhythm-aaa-icon.png",
     collection: "rhythm_game",
-    painter: "rhythm"
+    painter: "rhythm",
+    changelog: [
+      { ver: "v1.0.1", text: "新增曲目「小星星 ⭐」(Twinkle Twinkle Little Star)" },
+    ]
   },
   {
     name: "殭屍獵人",
@@ -1228,7 +1252,10 @@ const games = [
     url: "games/zombie-hunter/index.html",
     icon: "assets/images/zombie-aaa-icon.png",
     collection: "zombie_hunter",
-    painter: "zombie"
+    painter: "zombie",
+    changelog: [
+      { ver: "v1.0.1", text: "新增 ⚡ 快速殭屍（紫色，速度極快）+ 選單閃電特效" },
+    ]
   },
 ];
 
@@ -1369,6 +1396,15 @@ games.forEach((g, i) => {
       </div>
       <div class="card-name">${g.name}</div>
       <div class="card-desc">${g.desc}</div>
+      ${g.changelog && g.changelog.length ? `
+      <div class="card-changelog">
+        <div class="card-changelog-title">更新紀錄</div>
+        ${g.changelog.slice(-3).reverse().map(c => `
+          <div class="card-changelog-item">
+            <span class="card-changelog-ver">${c.ver}</span>
+            <span>${c.text}</span>
+          </div>`).join('')}
+      </div>` : ''}
       <div class="card-footer">
         <div class="card-play-btn">▶ 開始遊玩</div>
         <div class="card-num">0${i+1}</div>
