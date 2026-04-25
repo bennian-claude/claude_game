@@ -1,0 +1,17 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /balloon_shooter/{doc} {
+      allow read: if true;
+      allow create: if request.resource.data.name is string &&
+                       request.resource.data.name.size() <= 20 &&
+                       request.resource.data.score is number;
+    }
+    match /rhythm_game/{doc} {
+      allow read: if true;
+      allow create: if request.resource.data.name is string &&
+                       request.resource.data.name.size() <= 20 &&
+                       request.resource.data.score is number;
+    }
+  }
+}

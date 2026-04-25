@@ -82,6 +82,36 @@
     transition: background 0.15s; display: none;
   }
   #skipBtn:hover { background: rgba(0,0,0,0.7); }
+
+  /* 排行榜 */
+  #nameInputSection { width:100%; max-width:360px; margin-top:14px; text-align:center; }
+  #nameInputSection input {
+    width:100%; padding:10px 16px; font-size:18px; border-radius:999px;
+    border:2px solid rgba(255,255,255,0.5); background:rgba(255,255,255,0.15);
+    color:#fff; text-align:center; margin-bottom:10px; outline:none;
+    font-family:inherit; backdrop-filter:blur(4px);
+  }
+  #nameInputSection input::placeholder { color:rgba(255,255,255,0.45); }
+  #nameInputSection .row { display:flex; gap:10px; justify-content:center; }
+  .btn-skip {
+    margin-top:0; padding:10px 22px; font-size:16px; font-weight:600;
+    border:none; border-radius:999px; cursor:pointer;
+    background:rgba(255,255,255,0.18); color:#fff; box-shadow:none;
+    transition:transform .15s;
+  }
+  .btn-skip:active { transform:scale(0.95); }
+  #leaderboardSection { width:100%; max-width:380px; margin-top:12px; }
+  #leaderboardSection h3 { font-size:17px; margin-bottom:8px; letter-spacing:.5px; }
+  .lb-row {
+    display:flex; align-items:center; gap:8px; padding:7px 12px;
+    margin-bottom:4px; border-radius:10px; background:rgba(255,255,255,0.12);
+    font-size:15px;
+  }
+  .lb-mine { background:rgba(255,215,0,0.28)!important; border:1px solid rgba(255,215,0,0.55); }
+  .lb-rank { width:26px; font-weight:900; font-size:16px; }
+  .lb-name { flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lb-score { font-weight:700; color:#ffd700; white-space:nowrap; }
+  .lb-msg { opacity:.6; font-size:14px; padding:6px 0; }
 </style>
 </head>
 <body>
@@ -119,7 +149,19 @@
   <h1>⏰ 時間到！</h1>
   <h2 id="finalScore">分數：0</h2>
   <p id="finalComment"></p>
-  <button id="restartBtn">再玩一次</button>
+  <div id="nameInputSection">
+    <p style="font-size:14px;opacity:.85;margin-bottom:8px">留下名字，上排行榜！</p>
+    <input id="playerNameInput" type="text" placeholder="名字或座號（最多 8 字）" maxlength="8">
+    <div class="row">
+      <button id="submitScoreBtn">送出 🚀</button>
+      <button class="btn-skip" id="skipScoreBtn">跳過</button>
+    </div>
+  </div>
+  <div id="leaderboardSection" class="hidden">
+    <h3>🏆 射氣球排行榜 Top 10</h3>
+    <div id="leaderboardList"></div>
+  </div>
+  <button id="restartBtn" style="margin-top:16px">再玩一次</button>
 </div>
 
 <script>
@@ -654,6 +696,7 @@
     else comment = '💣 炸到太多啦～';
     finalComment.textContent = comment;
     endScreen.classList.remove('hidden');
+    if (window.onGameEnd) window.onGameEnd(state.score);
   }
 
   // ---- Input ----
@@ -693,6 +736,92 @@
 
   startBtn.addEventListener('click', () => { ensureAudio(); startGame(); });
   restartBtn.addEventListener('click', () => { ensureAudio(); startGame(); });
+})();
+</script>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+(function() {
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyCFVDsAvTx10-eshL3RYiSzyYlPFEvqyz8",
+    authDomain: "claude-code-project-3a0d3.firebaseapp.com",
+    projectId: "claude-code-project-3a0d3",
+    storageBucket: "claude-code-project-3a0d3.firebasestorage.app",
+    messagingSenderId: "451203824543",
+    appId: "1:451203824543:web:fa2e9bb8c2c0f69c339baa"
+  };
+  if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+  const db = firebase.firestore();
+  const COL = 'balloon_shooter';
+
+  let currentScore = 0;
+  let submitted = false;
+
+  const nameSection  = document.getElementById('nameInputSection');
+  const lbSection    = document.getElementById('leaderboardSection');
+  const lbList       = document.getElementById('leaderboardList');
+  const nameInput    = document.getElementById('playerNameInput');
+  const submitBtn    = document.getElementById('submitScoreBtn');
+  const skipBtn      = document.getElementById('skipScoreBtn');
+  const restartBtn   = document.getElementById('restartBtn');
+
+  window.onGameEnd = function(score) {
+    currentScore = score;
+    submitted = false;
+    submitBtn.disabled = false;
+    submitBtn.textContent = '送出 🚀';
+    nameInput.value = '';
+    nameSection.classList.remove('hidden');
+    lbSection.classList.add('hidden');
+  };
+
+  async function showLeaderboard(myName) {
+    nameSection.classList.add('hidden');
+    lbSection.classList.remove('hidden');
+    lbList.innerHTML = '<div class="lb-msg">載入中...</div>';
+    try {
+      const snap = await db.collection(COL).orderBy('score', 'desc').limit(10).get();
+      const rows = [];
+      snap.forEach(doc => rows.push(doc.data()));
+      if (!rows.length) { lbList.innerHTML = '<div class="lb-msg">還沒有紀錄，你是第一個！</div>'; return; }
+      const medals = ['🥇','🥈','🥉'];
+      lbList.innerHTML = rows.map((r, i) => {
+        const mine = myName && r.name === myName && r.score === currentScore;
+        return `<div class="lb-row${mine ? ' lb-mine' : ''}">
+          <span class="lb-rank">${medals[i] || (i + 1)}</span>
+          <span class="lb-name">${r.name}</span>
+          <span class="lb-score">${r.score} 分</span>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      lbList.innerHTML = '<div class="lb-msg">⚠️ 載入失敗，請確認網路</div>';
+    }
+  }
+
+  submitBtn.addEventListener('click', async function() {
+    if (submitted) return;
+    const name = nameInput.value.trim() || '匿名';
+    submitted = true;
+    submitBtn.disabled = true;
+    submitBtn.textContent = '送出中...';
+    try {
+      await db.collection(COL).add({
+        name,
+        score: currentScore,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(e) { console.error('送出失敗', e); }
+    showLeaderboard(name);
+  });
+
+  skipBtn.addEventListener('click', () => showLeaderboard(null));
+
+  restartBtn.addEventListener('click', function() {
+    nameSection.classList.remove('hidden');
+    lbSection.classList.add('hidden');
+  });
 })();
 </script>
 </body>

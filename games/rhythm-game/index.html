@@ -205,6 +205,44 @@
             color: #f00; font-size: 3rem; text-shadow: 0 0 20px #f00; font-weight: 900;
             display: none; position: absolute; z-index: 11; transition: opacity 0.5s ease;
         }
+
+        /* 排行榜 */
+        #rNameInputSection {
+            width: 100%; max-width: 380px; margin: 12px auto 0; text-align: center;
+        }
+        #rNameInputSection p { font-size: 0.95rem; color: #aaa; margin-bottom: 8px; font-family: '微軟正黑體', sans-serif; }
+        #rNameInputSection input {
+            width: 100%; padding: 10px 16px; font-size: 1rem; border-radius: 5px;
+            border: 1px solid #0ff; background: rgba(0,255,255,0.08); color: #fff;
+            text-align: center; margin-bottom: 10px; outline: none; font-family: 'Orbitron', sans-serif;
+        }
+        #rNameInputSection input::placeholder { color: rgba(0,255,255,0.35); }
+        #rNameInputSection .r-row { display: flex; gap: 10px; justify-content: center; }
+        #rLeaderboardSection {
+            width: 100%; max-width: 420px; margin: 12px auto 0;
+        }
+        #rLeaderboardSection h3 {
+            font-size: 1rem; color: #0ff; text-shadow: 0 0 8px #0ff;
+            margin-bottom: 10px; letter-spacing: 2px; text-transform: uppercase;
+        }
+        .r-lb-row {
+            display: flex; align-items: center; gap: 8px; padding: 7px 12px;
+            margin-bottom: 4px; border-radius: 5px; background: rgba(0,255,255,0.07);
+            border: 1px solid rgba(0,255,255,0.12); font-size: 0.9rem;
+            font-family: 'Orbitron', sans-serif;
+        }
+        .r-lb-mine { background: rgba(0,255,255,0.18) !important; border-color: #0ff !important; }
+        .r-lb-rank { width: 28px; color: #0ff; font-weight: 700; font-size: 1rem; }
+        .r-lb-name { flex: 1; text-align: left; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .r-lb-diff { color: #aaa; font-size: 0.75rem; margin-right: 6px; }
+        .r-lb-score { color: #0ff; font-weight: 700; text-shadow: 0 0 6px #0ff; white-space: nowrap; }
+        .r-lb-msg { opacity: .55; font-size: 0.85rem; padding: 6px 0; font-family: '微軟正黑體', sans-serif; }
+        .btn-r-skip {
+            padding: 10px 22px; font-size: 0.9rem; font-family: 'Orbitron', sans-serif;
+            background: rgba(255,255,255,0.08); color: #aaa; border: 1px solid #555;
+            border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s;
+        }
+        .btn-r-skip:hover { background: rgba(255,255,255,0.15); color: #fff; }
     </style>
 </head>
 <body>
@@ -324,7 +362,19 @@
     <div id="resultScreen" class="overlay">
         <h1>STAGE CLEAR</h1>
         <div id="resultDetails" class="inst"></div>
-        <div class="menu-btns">
+        <div id="rNameInputSection" style="display:none">
+            <p>留下名字，上排行榜！</p>
+            <input id="rPlayerNameInput" type="text" placeholder="名字或座號（最多 8 字）" maxlength="8">
+            <div class="r-row">
+                <button class="btn btn-normal" id="rSubmitScoreBtn">送出 🚀</button>
+                <button class="btn-r-skip" id="rSkipScoreBtn">跳過</button>
+            </div>
+        </div>
+        <div id="rLeaderboardSection" style="display:none">
+            <h3>[ RHYTHM 排行榜 TOP 10 ]</h3>
+            <div id="rLeaderboardList"></div>
+        </div>
+        <div class="menu-btns" style="margin-top:16px">
             <button class="btn btn-normal" onclick="restartGame()">再玩一次</button>
             <button class="btn" id="btnGoMenu" onclick="goToMenu(false)">回到選單</button>
         </div>
@@ -845,6 +895,8 @@
                     `;
                     activeAudioNodes.forEach(node => { try { node.stop(); } catch(e){} });
 
+                    if (window.onRhythmGameEnd) window.onRhythmGameEnd(score, currentDifficulty, maxCombo, accEl.innerText, currentSong);
+
                     matrixTimeout = setTimeout(() => {
                         startMatrix();
                         glitchScoreInterval = setInterval(() => {
@@ -1024,6 +1076,95 @@
 
         requestAnimationFrame(gameLoop);
         playIntro();
+    </script>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script>
+    (function() {
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyCFVDsAvTx10-eshL3RYiSzyYlPFEvqyz8",
+            authDomain: "claude-code-project-3a0d3.firebaseapp.com",
+            projectId: "claude-code-project-3a0d3",
+            storageBucket: "claude-code-project-3a0d3.firebasestorage.app",
+            messagingSenderId: "451203824543",
+            appId: "1:451203824543:web:fa2e9bb8c2c0f69c339baa"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+        const db = firebase.firestore();
+        const COL = 'rhythm_game';
+
+        let currentScore = 0, currentDiff = '', currentCombo = 0, currentAcc = '', currentSongId = '';
+        let submitted = false;
+
+        const nameSection = document.getElementById('rNameInputSection');
+        const lbSection   = document.getElementById('rLeaderboardSection');
+        const lbList      = document.getElementById('rLeaderboardList');
+        const nameInput   = document.getElementById('rPlayerNameInput');
+        const submitBtn   = document.getElementById('rSubmitScoreBtn');
+        const skipBtn     = document.getElementById('rSkipScoreBtn');
+
+        window.onRhythmGameEnd = function(score, diff, combo, acc, song) {
+            currentScore   = score;
+            currentDiff    = diff === 'HARD' ? 'CHAOS' : diff;
+            currentCombo   = combo;
+            currentAcc     = acc;
+            currentSongId  = song;
+            submitted = false;
+            submitBtn.disabled = false;
+            submitBtn.textContent = '送出 🚀';
+            nameInput.value = '';
+            nameSection.style.display = 'block';
+            lbSection.style.display = 'none';
+        };
+
+        async function showLeaderboard(myName) {
+            nameSection.style.display = 'none';
+            lbSection.style.display = 'block';
+            lbList.innerHTML = '<div class="r-lb-msg">載入中...</div>';
+            try {
+                const snap = await db.collection(COL).orderBy('score', 'desc').limit(10).get();
+                const rows = [];
+                snap.forEach(doc => rows.push(doc.data()));
+                if (!rows.length) { lbList.innerHTML = '<div class="r-lb-msg">還沒有紀錄！</div>'; return; }
+                const medals = ['🥇','🥈','🥉'];
+                lbList.innerHTML = rows.map((r, i) => {
+                    const mine = myName && r.name === myName && r.score === currentScore;
+                    return `<div class="r-lb-row${mine ? ' r-lb-mine' : ''}">
+                        <span class="r-lb-rank">${medals[i] || (i+1)}</span>
+                        <span class="r-lb-name">${r.name}</span>
+                        <span class="r-lb-diff">${r.difficulty || ''}</span>
+                        <span class="r-lb-score">${String(r.score).padStart(7,'0')}</span>
+                    </div>`;
+                }).join('');
+            } catch(e) {
+                lbList.innerHTML = '<div class="r-lb-msg">⚠️ 載入失敗，請確認網路</div>';
+            }
+        }
+
+        submitBtn.addEventListener('click', async function() {
+            if (submitted) return;
+            const name = nameInput.value.trim() || '匿名';
+            submitted = true;
+            submitBtn.disabled = true;
+            submitBtn.textContent = '送出中...';
+            try {
+                await db.collection(COL).add({
+                    name,
+                    score: currentScore,
+                    difficulty: currentDiff,
+                    maxCombo: currentCombo,
+                    accuracy: currentAcc,
+                    song: currentSongId,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch(e) { console.error('送出失敗', e); }
+            showLeaderboard(name);
+        });
+
+        skipBtn.addEventListener('click', () => showLeaderboard(null));
+    })();
     </script>
 </body>
 </html>
