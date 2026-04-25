@@ -10,15 +10,26 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --neon-cyan: #00f5ff;
-      --neon-purple: #bf5fff;
-      --neon-pink: #ff2d78;
-      --bg-dark: #070a12;
+      --ember: #ffb000;
+      --signal: #00f5ff;
+      --venom: #55ff88;
+      --flare: #ff2d78;
+      --violet: #8f66ff;
+      --paper: #f4f7fb;
+      --muted: rgba(244,247,251,0.66);
+      --line: rgba(244,247,251,0.14);
+      --bg-dark: #07080d;
     }
+
+    html { background: var(--bg-dark); }
 
     body {
       font-family: "Noto Sans TC", sans-serif;
-      background: var(--bg-dark);
+      background:
+        radial-gradient(circle at 18% 12%, rgba(255,176,0,0.14), transparent 28rem),
+        radial-gradient(circle at 82% 6%, rgba(0,245,255,0.12), transparent 26rem),
+        radial-gradient(circle at 58% 88%, rgba(85,255,136,0.08), transparent 30rem),
+        linear-gradient(140deg, #07080d 0%, #101216 46%, #06090d 100%);
       color: #e8eaf6;
       min-height: 100vh;
       overflow-x: hidden;
@@ -32,62 +43,197 @@
       content: "";
       position: fixed; inset: 0;
       background-image:
-        linear-gradient(rgba(0,245,255,0.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,245,255,0.025) 1px, transparent 1px);
-      background-size: 48px 48px;
+        linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.028) 1px, transparent 1px);
+      background-size: 56px 56px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent 82%);
+      z-index: 1; pointer-events: none;
+    }
+
+    body::after {
+      content: "";
+      position: fixed; inset: 0;
+      background:
+        linear-gradient(115deg, transparent 0 18%, rgba(255,255,255,0.045) 18.2%, transparent 18.7% 100%),
+        radial-gradient(circle at center, transparent 0, rgba(0,0,0,0.48) 75%);
       z-index: 1; pointer-events: none;
     }
 
     .page {
       position: relative; z-index: 2;
       display: flex; flex-direction: column; align-items: center;
-      padding: 0 1.5rem 5rem;
+      padding: 1.25rem 1.25rem 4.5rem;
+    }
+
+    .topbar {
+      width: 100%;
+      max-width: 1120px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem;
+      padding: 0.8rem 0;
+    }
+
+    .brand {
+      display: flex; align-items: center; gap: 0.75rem;
+      font-family: "Orbitron", monospace;
+      color: var(--paper);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+      font-weight: 900;
+    }
+
+    .brand-mark {
+      width: 2.2rem; height: 2.2rem;
+      display: grid; place-items: center;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      background: linear-gradient(135deg, rgba(255,176,0,0.28), rgba(0,245,255,0.16));
+      box-shadow: 0 0 24px rgba(255,176,0,0.18);
+    }
+
+    .music-toggle {
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.08);
+      color: var(--paper);
+      cursor: pointer;
+      padding: 0.75rem 0.95rem;
+      font: 900 0.72rem "Orbitron", monospace;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 34px rgba(0,0,0,0.24);
+      transition: transform 0.18s, border-color 0.18s, background 0.18s;
+    }
+
+    .music-toggle:hover {
+      transform: translateY(-2px);
+      border-color: rgba(0,245,255,0.55);
+      background: rgba(0,245,255,0.12);
+    }
+
+    .music-toggle.is-on {
+      color: #06100b;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--ember), var(--venom));
     }
 
     /* ── Hero ── */
     .hero {
-      text-align: center;
-      padding: 5rem 1rem 2.5rem;
+      width: 100%;
+      max-width: 1120px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+      gap: clamp(1.5rem, 5vw, 4rem);
+      align-items: center;
+      padding: clamp(2.5rem, 7vw, 6rem) 0 clamp(2rem, 5vw, 3rem);
     }
+
+    .hero-copy { min-width: 0; }
+
     .hero-badge {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
       font-family: "Orbitron", monospace;
       font-size: 0.65rem; letter-spacing: 0.25em; text-transform: uppercase;
-      color: var(--neon-cyan);
-      border: 1px solid var(--neon-cyan);
-      padding: 0.3em 1.1em; border-radius: 100px; margin-bottom: 1.5rem;
-      box-shadow: 0 0 14px rgba(0,245,255,0.3), inset 0 0 8px rgba(0,245,255,0.08);
+      color: var(--signal);
+      border: 1px solid rgba(0,245,255,0.48);
+      padding: 0.5em 1.1em; border-radius: 999px; margin-bottom: 1.35rem;
+      box-shadow: 0 0 20px rgba(0,245,255,0.18), inset 0 0 10px rgba(0,245,255,0.08);
       animation: badgePulse 3s ease-in-out infinite;
     }
     @keyframes badgePulse {
-      0%,100% { box-shadow: 0 0 14px rgba(0,245,255,0.3), inset 0 0 8px rgba(0,245,255,0.08); }
-      50%      { box-shadow: 0 0 28px rgba(0,245,255,0.6), inset 0 0 16px rgba(0,245,255,0.15); }
+      0%,100% { box-shadow: 0 0 20px rgba(0,245,255,0.18), inset 0 0 10px rgba(0,245,255,0.08); }
+      50%      { box-shadow: 0 0 34px rgba(255,176,0,0.22), inset 0 0 18px rgba(255,176,0,0.1); }
     }
     .hero-title {
       font-family: "Orbitron", monospace;
-      font-size: clamp(2.4rem, 6vw, 4.8rem);
+      font-size: clamp(2.8rem, 8vw, 6.3rem);
       font-weight: 900; line-height: 1.1;
-      background: linear-gradient(135deg, #fff 20%, var(--neon-cyan) 52%, var(--neon-purple) 85%);
+      letter-spacing: 0;
+      background: linear-gradient(135deg, #fff 8%, var(--ember) 38%, var(--signal) 72%, #fff 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-      filter: drop-shadow(0 0 22px rgba(0,245,255,0.4));
-      margin-bottom: 0.75rem;
+      filter: drop-shadow(0 0 30px rgba(255,176,0,0.22));
+      margin-bottom: 1rem;
     }
-    .hero-sub { font-size: 1rem; color: rgba(255,255,255,0.4); letter-spacing: 0.05em; }
-    .hero-sub span { color: var(--neon-cyan); font-weight: 700; }
+    .hero-sub {
+      max-width: 42rem;
+      font-size: clamp(1rem, 2vw, 1.18rem);
+      color: var(--muted);
+      line-height: 1.9;
+      letter-spacing: 0.02em;
+    }
+    .hero-sub span { color: var(--paper); font-weight: 900; }
+
+    .hero-panel {
+      position: relative;
+      min-height: 320px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.15);
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03)),
+        #0b0e14;
+      box-shadow: 0 30px 90px rgba(0,0,0,0.42);
+    }
+
+    .hero-panel::before {
+      content: "";
+      position: absolute; inset: 0;
+      background:
+        linear-gradient(140deg, rgba(255,176,0,0.16), transparent 42%),
+        linear-gradient(320deg, rgba(0,245,255,0.16), transparent 48%);
+      z-index: 1;
+    }
+
+    .hero-panel img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      filter: saturate(1.14) contrast(1.08);
+      opacity: 0.82;
+    }
+
+    .hero-panel-copy {
+      position: absolute;
+      left: 1.2rem; right: 1.2rem; bottom: 1.15rem;
+      z-index: 2;
+      display: flex; justify-content: space-between; align-items: end; gap: 1rem;
+      color: var(--paper);
+      font-family: "Orbitron", monospace;
+      text-transform: uppercase;
+    }
+
+    .hero-panel-copy strong { display: block; font-size: 1.05rem; letter-spacing: 0.08em; }
+    .hero-panel-copy span { display: block; margin-top: 0.35rem; font-size: 0.62rem; color: rgba(255,255,255,0.62); letter-spacing: 0.18em; }
+
+    .hero-scan {
+      width: 4rem; height: 4rem;
+      border: 1px solid rgba(0,245,255,0.55);
+      border-radius: 50%;
+      display: grid; place-items: center;
+      color: var(--signal);
+      box-shadow: 0 0 24px rgba(0,245,255,0.3);
+      animation: scanSpin 8s linear infinite;
+    }
+
+    @keyframes scanSpin { to { transform: rotate(360deg); } }
 
     /* ── Divider ── */
     .divider {
-      width: 100%; max-width: 960px;
+      width: 100%; max-width: 1120px;
       display: flex; align-items: center; gap: 1rem;
-      margin: 0.5rem 0 2.5rem;
+      margin: 0.5rem 0 1.5rem;
     }
     .divider::before,.divider::after {
       content:""; flex:1; height:1px;
-      background: linear-gradient(90deg,transparent,rgba(0,245,255,0.3),transparent);
+      background: linear-gradient(90deg,transparent,rgba(255,255,255,0.22),transparent);
     }
     .divider span {
       font-family:"Orbitron",monospace; font-size:0.62rem;
-      letter-spacing:0.2em; color:rgba(0,245,255,0.5); white-space:nowrap; text-transform:uppercase;
+      letter-spacing:0.2em; color:rgba(255,255,255,0.52); white-space:nowrap; text-transform:uppercase;
     }
 
     /* ── Game Grid ── */
@@ -95,23 +241,25 @@
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 1.75rem;
-      width: 100%; max-width: 960px;
+      width: 100%; max-width: 1120px;
     }
 
     /* ── Game Card ── */
     .game-card {
       position: relative;
-      border-radius: 16px;
+      border-radius: 8px;
       overflow: hidden;
       text-decoration: none; color: inherit;
       cursor: pointer;
-      background: #0d1120;
-      border: 1px solid rgba(255,255,255,0.07);
+      background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.035));
+      border: 1px solid var(--line);
       transition: transform 0.3s cubic-bezier(.22,1,.36,1), box-shadow 0.3s, border-color 0.3s;
       display: flex; flex-direction: column;
+      min-height: 100%;
+      box-shadow: 0 16px 50px rgba(0,0,0,0.22);
     }
     .game-card:hover {
-      transform: translateY(-8px) scale(1.02);
+      transform: translateY(-8px);
       border-color: var(--c-accent, var(--neon-cyan));
       box-shadow:
         0 0 32px color-mix(in srgb, var(--c-accent, var(--neon-cyan)) 35%, transparent),
@@ -124,19 +272,42 @@
       aspect-ratio: 16/9;
       display: block;
       position: relative;
+      overflow: hidden;
+      background: #080a10;
+    }
+    .card-art img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      filter: saturate(1.12) contrast(1.08);
+      transform: scale(1.01);
+      transition: transform 0.45s ease, opacity 0.45s ease;
     }
     .card-art canvas {
-      width: 100%; height: 100%;
+      position: absolute;
+      right: 0.75rem; bottom: 0.75rem;
+      width: 42%; height: 42%;
       display: block;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 8px;
+      background: rgba(0,0,0,0.34);
+      box-shadow: 0 14px 38px rgba(0,0,0,0.48);
+      backdrop-filter: blur(8px);
+    }
+    .game-card:hover .card-art img {
+      transform: scale(1.06);
     }
 
     /* shine sweep on hover */
     .card-art::after {
       content:"";
       position: absolute; inset:0;
-      background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.07) 50%, transparent 70%);
+      background:
+        linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.11) 50%, transparent 70%),
+        linear-gradient(0deg, rgba(0,0,0,0.72), transparent 48%);
       transform: translateX(-100%);
       transition: transform 0s;
+      pointer-events: none;
     }
     .game-card:hover .card-art::after {
       transform: translateX(100%);
@@ -157,14 +328,14 @@
       font-size: 0.58rem; letter-spacing: 0.15em; text-transform: uppercase;
       color: var(--c-accent, var(--neon-cyan));
       border: 1px solid currentColor;
-      padding: 0.15em 0.65em; border-radius: 100px;
+      padding: 0.15em 0.65em; border-radius: 999px;
     }
     .card-stars { font-size: 0.75rem; color: #ffe600; letter-spacing: -1px; }
     .card-name {
       font-size: 1.25rem; font-weight: 900; color: #fff;
       letter-spacing: 0.01em; line-height: 1.2;
     }
-    .card-desc { font-size: 0.83rem; color: rgba(255,255,255,0.42); line-height: 1.65; }
+    .card-desc { font-size: 0.86rem; color: rgba(255,255,255,0.58); line-height: 1.7; }
     .card-footer {
       display: flex; align-items: center; justify-content: space-between;
       margin-top: 0.75rem; padding-top: 0.85rem;
@@ -173,7 +344,7 @@
     .card-play-btn {
       font-family: "Orbitron", monospace;
       font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
-      color: #000;
+      color: #06100b;
       background: var(--c-accent, var(--neon-cyan));
       padding: 0.45em 1.1em; border-radius: 6px;
       box-shadow: 0 0 14px color-mix(in srgb, var(--c-accent, var(--neon-cyan)) 50%, transparent);
@@ -186,7 +357,7 @@
     .card-num {
       font-family: "Orbitron", monospace;
       font-size: 0.7rem; letter-spacing: 0.1em;
-      color: rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.28);
     }
 
     /* ── Footer ── */
@@ -195,7 +366,27 @@
       text-align: center; padding: 2rem;
       font-size: 0.72rem; color: rgba(255,255,255,0.18); letter-spacing: 0.05em;
     }
-    footer span { color: rgba(0,245,255,0.4); }
+    footer span { color: rgba(255,176,0,0.55); }
+
+    @media (max-width: 760px) {
+      .page { padding: 1rem 1rem 3rem; }
+      .topbar { align-items: flex-start; gap: 0.6rem; }
+      .brand { font-size: 0.68rem; }
+      .brand-mark { width: 2rem; height: 2rem; }
+      .music-toggle {
+        position: fixed;
+        top: 1.85rem;
+        right: 1rem;
+        z-index: 20;
+        padding: 0.7rem 0.78rem;
+        font-size: 0.64rem;
+      }
+      .hero { grid-template-columns: 1fr; padding-top: 2rem; }
+      .hero-panel { min-height: 240px; }
+      .hero-title { font-size: clamp(2.5rem, 15vw, 4.2rem); }
+      .game-grid { grid-template-columns: 1fr; }
+      .card-art canvas { width: 44%; height: 44%; }
+    }
   </style>
 </head>
 <body>
@@ -203,13 +394,33 @@
 <canvas id="starfield"></canvas>
 
 <div class="page">
+  <nav class="topbar" aria-label="Game hub controls">
+    <div class="brand">
+      <span class="brand-mark">GH</span>
+      <span>Class Game Arsenal</span>
+    </div>
+    <button class="music-toggle" id="musicToggle" type="button" aria-pressed="false">Music Off</button>
+  </nav>
+
   <header class="hero">
-    <div class="hero-badge">🎮 &nbsp;Game Hub &nbsp;·&nbsp; Class Edition</div>
-    <h1 class="hero-title">班級小遊戲</h1>
-    <p class="hero-sub">選一個遊戲，<span>開始競技</span>！</p>
+    <div class="hero-copy">
+      <div class="hero-badge">Game Hub · Class Edition</div>
+      <h1 class="hero-title">班級小遊戲</h1>
+      <p class="hero-sub">三款即開即玩的課堂競技遊戲，現在升級成更像主機遊戲選單的入口。選一張卡片，<span>直接開戰</span>。</p>
+    </div>
+    <div class="hero-panel" aria-hidden="true">
+      <img src="assets/images/zombie-aaa-icon.png" alt="">
+      <div class="hero-panel-copy">
+        <div>
+          <strong>AAA Mode</strong>
+          <span>visual upgrade online</span>
+        </div>
+        <div class="hero-scan">+</div>
+      </div>
+    </div>
   </header>
 
-  <div class="divider"><span>// select your game</span></div>
+  <div class="divider"><span>// choose your arena</span></div>
 
   <main class="game-grid" id="gameGrid"></main>
 </div>
@@ -664,6 +875,7 @@ const games = [
     accent: "#ff2d78",
     stars: "★★★★☆",
     url: "games/balloon-shooter/index.html",
+    icon: "assets/images/balloon-aaa-icon.png",
     painter: "balloon"
   },
   {
@@ -673,6 +885,7 @@ const games = [
     accent: "#bf5fff",
     stars: "★★★★★",
     url: "games/rhythm-game/index.html",
+    icon: "assets/images/rhythm-aaa-icon.png",
     painter: "rhythm"
   },
   {
@@ -682,6 +895,7 @@ const games = [
     accent: "#00ff88",
     stars: "★★★★☆",
     url: "games/zombie-hunter/index.html",
+    icon: "assets/images/zombie-aaa-icon.png",
     painter: "zombie"
   },
 ];
@@ -697,7 +911,12 @@ games.forEach((g, i) => {
   // art wrapper
   const artDiv = document.createElement("div");
   artDiv.className = "card-art";
+  const img = document.createElement("img");
+  img.src = g.icon;
+  img.alt = `${g.name} 3A 風格圖示`;
+  artDiv.appendChild(img);
   const cvs = document.createElement("canvas");
+  cvs.setAttribute("aria-label", `${g.name} 動態預覽`);
   artDiv.appendChild(cvs);
   card.appendChild(artDiv);
 
@@ -726,6 +945,123 @@ games.forEach((g, i) => {
     if(g.painter === "zombie")  paintZombieHunter(cvs);
   });
 });
+</script>
+
+<!-- ══════════════════ MUSIC CONTROLLER ══════════════════ -->
+<script>
+(function(){
+  const btn = document.getElementById("musicToggle");
+  let audioCtx = null;
+  let master = null;
+  let delay = null;
+  let feedback = null;
+  let timer = null;
+  let step = 0;
+  const bpm = 92;
+  const beatMs = 60000 / bpm / 2;
+  const progression = [
+    [196.00, 246.94, 293.66, 392.00],
+    [174.61, 220.00, 261.63, 349.23],
+    [164.81, 207.65, 246.94, 329.63],
+    [146.83, 196.00, 246.94, 293.66]
+  ];
+
+  function setup() {
+    if (audioCtx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) {
+      btn.textContent = "Music N/A";
+      btn.disabled = true;
+      return;
+    }
+    audioCtx = new AC();
+    master = audioCtx.createGain();
+    master.gain.value = 0.0001;
+    delay = audioCtx.createDelay();
+    delay.delayTime.value = 0.28;
+    feedback = audioCtx.createGain();
+    feedback.gain.value = 0.28;
+    delay.connect(feedback).connect(delay);
+    delay.connect(master);
+    master.connect(audioCtx.destination);
+  }
+
+  function tone(freq, time, dur, type, vol, dest = master) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, time);
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.exponentialRampToValueAtTime(vol, time + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+    osc.connect(gain).connect(dest);
+    osc.start(time);
+    osc.stop(time + dur + 0.05);
+  }
+
+  function noiseHat(time) {
+    const length = audioCtx.sampleRate * 0.06;
+    const buffer = audioCtx.createBuffer(1, length, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / length);
+    const src = audioCtx.createBufferSource();
+    const filter = audioCtx.createBiquadFilter();
+    const gain = audioCtx.createGain();
+    filter.type = "highpass";
+    filter.frequency.value = 4800;
+    gain.gain.setValueAtTime(0.025, time);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.055);
+    src.buffer = buffer;
+    src.connect(filter).connect(gain).connect(master);
+    src.start(time);
+  }
+
+  function tick() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime + 0.03;
+    const chord = progression[Math.floor(step / 8) % progression.length];
+    const note = chord[step % chord.length] * (step % 16 === 15 ? 2 : 1);
+    tone(chord[0] / 2, now, 0.34, "triangle", step % 8 === 0 ? 0.12 : 0.055);
+    tone(note, now, 0.18, "sine", 0.05, delay);
+    if (step % 4 === 2) tone(note * 1.5, now + 0.08, 0.16, "sine", 0.035, delay);
+    if (step % 2 === 0) noiseHat(now);
+    step++;
+  }
+
+  async function start() {
+    setup();
+    if (!audioCtx) return;
+    await audioCtx.resume();
+    master.gain.cancelScheduledValues(audioCtx.currentTime);
+    master.gain.exponentialRampToValueAtTime(0.42, audioCtx.currentTime + 0.6);
+    tick();
+    timer = setInterval(tick, beatMs);
+    btn.classList.add("is-on");
+    btn.setAttribute("aria-pressed", "true");
+    btn.textContent = "Music On";
+  }
+
+  function stop() {
+    if (timer) clearInterval(timer);
+    timer = null;
+    if (master && audioCtx) {
+      master.gain.cancelScheduledValues(audioCtx.currentTime);
+      master.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.35);
+    }
+    btn.classList.remove("is-on");
+    btn.setAttribute("aria-pressed", "false");
+    btn.textContent = "Music Off";
+  }
+
+  btn.addEventListener("click", () => {
+    if (timer) stop();
+    else start();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && timer) stop();
+  });
+})();
 </script>
 
 </body>
