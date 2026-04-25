@@ -130,16 +130,19 @@
   <div id="timer">20</div>
 </div>
 <div id="invincibleBar">⭐ 無敵模式 ⭐</div>
+<div id="freezeBar" style="position:fixed;top:100px;left:50%;transform:translateX(-50%);padding:6px 16px;border-radius:20px;background:linear-gradient(90deg,#00c8ff,#0077ff);color:#fff;font-weight:900;font-size:18px;text-shadow:0 2px 4px rgba(0,0,0,0.5);box-shadow:0 0 20px rgba(0,200,255,0.8);display:none">❄️ 凍結中 ❄️</div>
 <div id="shake"></div>
 
 <div id="startScreen" class="overlay">
   <h1>🎈 射氣球大作戰 🎈</h1>
+  <p style="font-size:12px;opacity:0.45;margin-bottom:4px">Release v1.0.1</p>
   <p>20 秒內射破氣球並收集掉落物拿最高分！</p>
   <div class="rules">
     <span>🎈 氣球 +1</span>
     <span>🎁 禮物 +5</span>
     <span>💣 炸彈 -10</span>
     <span>⭐ 星星 → 無敵 5 秒</span>
+    <span>❄️ 冰晶 → 凍結 5 秒</span>
   </div>
   <p style="margin-top:14px;opacity:0.85">無敵模式：分數加倍，炸彈免疫還給 +5！</p>
   <button id="startBtn">開始遊戲</button>
@@ -247,6 +250,7 @@
       const notes = [523.25, 659.25, 783.99, 1046.5]; // C major arpeggio
       notes.forEach((f, i) => playTone({ type: 'square', from: f, to: f, dur: 0.15, vol: 0.22, delay: i * 0.08 }));
     },
+    freeze() { [1046.5, 1318.5, 1567.98].forEach((f, i) => playTone({ type: 'sine', from: f, to: f * 0.5, dur: 0.4, vol: 0.2, delay: i * 0.07 })); },
     gameover() { playTone({ type: 'triangle', from: 300, to: 100, dur: 0.8, vol: 0.3 }); },
     bgmTick(high) {
       const f = high ? 987.77 : 783.99; // B5 / G5
@@ -264,6 +268,7 @@
     items: [],
     particles: [],
     invincibleFrames: 0,
+    freezeFrames: 0,
     spawnCounter: 0,
     mouse: { x: W / 2, y: H / 2 },
     shakeFrames: 0,
@@ -294,12 +299,14 @@
     if (type === 'gift') state.items.push({ ...base, type, r: 22, vy: -3, g: 0.3, vx: (Math.random() - 0.5) * 2 });
     else if (type === 'bomb') state.items.push({ ...base, type, r: 24, vy: 0, g: 0.1, vx: (Math.random() - 0.5) * 1.5, spark: 0 });
     else if (type === 'star') state.items.push({ ...base, type, r: 26, vy: -5, g: 0.2, vx: (Math.random() - 0.5) * 2, glow: 0 });
+    else if (type === 'freeze') state.items.push({ ...base, type, r: 22, vy: -2, g: 0.12, vx: (Math.random() - 0.5) * 1.5, angle: 0 });
   }
   function maybeDropFromBalloon(x, y) {
     const r = Math.random();
     if (r < 0.20) spawnItem('gift', x, y);
     else if (r < 0.53) spawnItem('bomb', x, y);
     else if (r < 0.68) spawnItem('star', x, y);
+    else if (r < 0.80) spawnItem('freeze', x, y);
   }
   function spawnParticles(x, y, color) {
     for (let i = 0; i < 15; i++) {
@@ -464,6 +471,32 @@
     ctx.stroke();
     ctx.restore();
   }
+  function drawFreeze(it) {
+    ctx.save();
+    ctx.translate(it.x, it.y);
+    it.angle += 0.04;
+    ctx.rotate(it.angle);
+    const r = it.r;
+    // glow
+    const g = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r * 1.8);
+    g.addColorStop(0, 'rgba(180,240,255,0.9)');
+    g.addColorStop(1, 'rgba(0,150,255,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.8, 0, Math.PI * 2); ctx.fill();
+    // snowflake arms
+    ctx.strokeStyle = '#00c8ff'; ctx.lineWidth = 3;
+    ctx.shadowBlur = 8; ctx.shadowColor = '#00c8ff';
+    for (let i = 0; i < 6; i++) {
+      ctx.save(); ctx.rotate((Math.PI / 3) * i);
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -r);
+      ctx.moveTo(-r * 0.3, -r * 0.5); ctx.lineTo(r * 0.3, -r * 0.5);
+      ctx.stroke(); ctx.restore();
+    }
+    // center
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
   function drawParticles() {
     for (const p of state.particles) {
       ctx.globalAlpha = p.life;
@@ -556,6 +589,11 @@
       spawnParticles(it.x, it.y, '#ffd700');
       spawnParticles(it.x, it.y, '#fff');
       sfx.star();
+    } else if (it.type === 'freeze') {
+      state.freezeFrames = 300;
+      spawnParticles(it.x, it.y, '#00c8ff');
+      spawnParticles(it.x, it.y, '#ffffff');
+      sfx.freeze();
     }
     updateUI();
   }
@@ -572,12 +610,24 @@
       state.spawnCounter = 0;
     }
 
+    // freeze countdown
+    if (state.freezeFrames > 0) {
+      state.freezeFrames--;
+      const freezeBar = document.getElementById('freezeBar');
+      freezeBar.style.display = 'block';
+      freezeBar.style.opacity = (state.frame % 20 < 10) ? '1' : '0.7';
+      const secs = Math.ceil(state.freezeFrames / 60);
+      freezeBar.textContent = `❄️ 凍結中 ${secs}s ❄️`;
+    } else {
+      document.getElementById('freezeBar').style.display = 'none';
+    }
+
     // balloons
     for (const b of state.balloons) {
       if (!b.alive) continue;
       b.phase += b.swingSpeed;
       b.x = b.baseX + Math.sin(b.phase) * b.swing;
-      b.y += b.vy;
+      if (state.freezeFrames <= 0) b.y += b.vy;
     }
     state.balloons = state.balloons.filter(b => b.alive && b.y + b.r > -50);
 
@@ -634,6 +684,7 @@
       if (it.type === 'gift') drawGift(it);
       else if (it.type === 'bomb') drawBomb(it);
       else if (it.type === 'star') drawStar(it);
+      else if (it.type === 'freeze') drawFreeze(it);
     }
     drawParticles();
     drawCursor();
@@ -675,6 +726,7 @@
     state.items = [];
     state.particles = [];
     state.invincibleFrames = 0;
+    state.freezeFrames = 0;
     state.spawnCounter = 0;
     state.shakeFrames = 0;
     state.running = true;
