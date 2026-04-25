@@ -1,5 +1,7 @@
 {
-  "projects": {},
+  "projects": {
+    "default": "claude-code-project-3a0d3"
+  },
   "targets": {},
   "etags": {}
 }
