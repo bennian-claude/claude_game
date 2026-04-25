@@ -1405,18 +1405,6 @@ loadHomeLeaderboards();
   bgm.volume = bgmVolume;
   let introStarted = false;
   let hubEntered = false;
-  let bgmUnlocked = false;
-
-  async function unlockBgmSilently() {
-    if (bgmUnlocked) return;
-    bgm.volume = 0;
-    try {
-      await bgm.play();
-      bgmUnlocked = true;
-    } catch (error) {
-      console.error("Unable to unlock background music", error);
-    }
-  }
 
   async function start() {
     try {
@@ -1446,13 +1434,12 @@ loadHomeLeaderboards();
     introVideoScreen.classList.remove("is-active");
     zombieIntroVideo.pause();
     zombieIntroVideo.currentTime = 0;
-    await start();
+    stop();
   }
 
   async function enterHub() {
     if (introStarted) return;
     introStarted = true;
-    await unlockBgmSilently();
     entryGate.classList.add("is-hidden");
     introVideoScreen.classList.add("is-active");
     try {
@@ -1479,7 +1466,7 @@ loadHomeLeaderboards();
   }
 
   async function enterHubDirectly() {
-    await start();
+    hubEntered = true;
     entryGate.classList.add("is-hidden");
   }
 
