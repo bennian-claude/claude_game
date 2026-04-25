@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>殭屍獵人</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-user-select:none; }
+    body {
+      background: #070a12;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      height: 100dvh; overflow: hidden; touch-action: none;
+    }
+    canvas { display: block; border-radius: 12px; }
+
+    /* ── D-pad ── */
+    #dpad {
+      display: none;
+      grid-template-areas: ". up ." "left cx right" ". down .";
+      gap: 6px; margin-top: 12px;
+    }
+    .dp {
+      width: 58px; height: 58px;
+      background: rgba(0,245,255,0.10);
+      border: 2px solid rgba(0,245,255,0.28);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; color: rgba(0,245,255,0.75);
+      cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: none;
+      transition: background .1s;
+    }
+    .dp:active, .dp.pressed { background: rgba(0,245,255,0.28); }
+    #dp-up    { grid-area: up; }
+    #dp-left  { grid-area: left; }
+    #dp-right { grid-area: right; }
+    #dp-down  { grid-area: down; }
+    #dp-cx    { grid-area: cx; pointer-events: none; }
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="dpad">
+  <div class="dp" id="dp-up">↑</div>
+  <div class="dp" id="dp-left">←</div>
+  <div id="dp-cx"></div>
+  <div class="dp" id="dp-right">→</div>
+  <div class="dp" id="dp-down">↓</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  SETUP
+// ═══════════════════════════════════════════════════════
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const dpad   = document.getElementById('dpad');
+let W, H;
+
+const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+function resize() {
+  const dpadH = isTouch ? 148 : 0;
+  const sz = Math.min(window.innerWidth, window.innerHeight - dpadH, 640);
+  W = canvas.width  = Math.floor(sz);
+  H = canvas.height = Math.floor(sz);
+  dpad.style.display = isTouch ? 'grid' : 'none';
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ═══════════════════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════════════════
+const KILL_TARGET      = 15;
+const TOTAL_TIME       = 90;
+const ZOMBIE_COUNT     = 4;
+const HUNTER_DURATION  = 8;
+const HUNTER_COOLDOWN  = 12;
+const PLAYER_SPEED     = 220;
+const ZOMBIE_SPEED     = 175;
+const ZOMBIE_HUNT_SPD  = 55;
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+let state = 'menu'; // menu / playing / win / lose
+let kills, lives, timeLeft;
+let hunterMode, hunterTimer;
+let lastScore = 0;
+
+// ═══════════════════════════════════════════════════════
+//  PLAYER
+// ═══════════════════════════════════════════════════════
+const player = { x: 0, y: 0, r: 15 };
+
+// ═══════════════════════════════════════════════════════
+//  ZOMBIES
+// ═══════════════════════════════════════════════════════
+let zombies = [];
+
+function spawnEdge(z) {
+  const side = Math.floor(Math.random() * 4);
+  const m = 50;
+  if (side === 0) { z.x = -m;   z.y = Math.random() * H; }
+  else if (side === 1) { z.x = W+m;   z.y = Math.random() * H; }
+  else if (side === 2) { z.x = Math.random() * W; z.y = -m; }
+  else               { z.x = Math.random() * W; z.y = H+m; }
+  z.vx = 0; z.vy = 0;
+}
+
+function makeZombie() {
+  const z = { x: 0, y: 0, vx: 0, vy: 0, r: 17,
+              wobble: Math.random() * Math.PI * 2,
+              wSpd: 1.2 + Math.random() * 1.5 };
+  spawnEdge(z);
+  return z;
+}
+
+// ═══════════════════════════════════════════════════════
+//  PARTICLES
+// ═══════════════════════════════════════════════════════
+let particles = [];
+
+function burst(x, y, color, n = 14) {
+  for (let i = 0; i < n; i++) {
+    const a  = Math.random() * Math.PI * 2;
+    const sp = 70 + Math.random() * 200;
+    const ml = 0.35 + Math.random() * 0.35;
+    particles.push({ x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp,
+                     r: 2 + Math.random()*3, color, life: ml, ml });
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  INPUT
+// ═══════════════════════════════════════════════════════
+const keys = {};
+const td   = { up:false, down:false, left:false, right:false };
+
+window.addEventListener('keydown', e => {
+  keys[e.key] = true;
+  if (state !== 'playing') startGame();
+  if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'ArrowDown' ||
+      e.key === 'ArrowLeft' || e.key === 'ArrowRight') e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+// D-pad touch
+function bindDpad(id, dir) {
+  const el = document.getElementById(id);
+  const on  = e => { e.preventDefault(); td[dir] = true;  el.classList.add('pressed'); };
+  const off = ()  => { td[dir] = false; el.classList.remove('pressed'); };
+  el.addEventListener('touchstart', on,  { passive:false });
+  el.addEventListener('touchend',   off);
+  el.addEventListener('touchcancel',off);
+  el.addEventListener('mousedown',  on);
+  el.addEventListener('mouseup',    off);
+  el.addEventListener('mouseleave', off);
+}
+bindDpad('dp-up','up'); bindDpad('dp-down','down');
+bindDpad('dp-left','left'); bindDpad('dp-right','right');
+
+canvas.addEventListener('pointerdown', () => { if (state !== 'playing') startGame(); });
+
+// ═══════════════════════════════════════════════════════
+//  GAME LOGIC
+// ═══════════════════════════════════════════════════════
+function startGame() {
+  kills = 0; lives = 3;
+  timeLeft  = TOTAL_TIME;
+  hunterMode  = false;
+  hunterTimer = HUNTER_COOLDOWN;
+  player.x = W / 2; player.y = H / 2;
+  particles = [];
+  zombies = Array.from({ length: ZOMBIE_COUNT }, makeZombie);
+  state = 'playing';
+}
+
+function update(dt) {
+  if (state !== 'playing') return;
+
+  // Timers
+  timeLeft -= dt;
+  if (timeLeft <= 0) { state = 'lose'; return; }
+
+  hunterTimer -= dt;
+  if (hunterTimer <= 0) {
+    hunterMode  = !hunterMode;
+    hunterTimer = hunterMode ? HUNTER_DURATION : HUNTER_COOLDOWN;
+  }
+
+  // Player movement
+  let dx = 0, dy = 0;
+  if (keys['ArrowLeft']  || keys['a'] || keys['A'] || td.left)  dx -= 1;
+  if (keys['ArrowRight'] || keys['d'] || keys['D'] || td.right) dx += 1;
+  if (keys['ArrowUp']    || keys['w'] || keys['W'] || td.up)    dy -= 1;
+  if (keys['ArrowDown']  || keys['s'] || keys['S'] || td.down)  dy += 1;
+  if (dx || dy) {
+    const l = Math.sqrt(dx*dx + dy*dy);
+    player.x += (dx/l) * PLAYER_SPEED * dt;
+    player.y += (dy/l) * PLAYER_SPEED * dt;
+  }
+  player.x = Math.max(player.r, Math.min(W - player.r, player.x));
+  player.y = Math.max(player.r, Math.min(H - player.r, player.y));
+
+  // Zombies
+  for (const z of zombies) {
+    updateZombie(z, dt);
+    if (state !== 'playing') return;
+  }
+
+  // Particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.vy += 80 * dt;  // gravity
+    p.life -= dt;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+function updateZombie(z, dt) {
+  // Flee direction from player
+  const ex = z.x - player.x;
+  const ey = z.y - player.y;
+  const ed = Math.sqrt(ex*ex + ey*ey) || 1;
+
+  z.wobble += z.wSpd * dt;
+  const noiseAmt = hunterMode ? 0.35 : 0.9;
+  const nx = Math.cos(z.wobble) * noiseAmt;
+  const ny = Math.sin(z.wobble * 1.4) * noiseAmt;
+
+  let fx = ex/ed + nx, fy = ey/ed + ny;
+  const fl = Math.sqrt(fx*fx + fy*fy) || 1;
+  const spd = hunterMode ? ZOMBIE_HUNT_SPD : ZOMBIE_SPEED;
+  z.vx = (fx/fl) * spd;
+  z.vy = (fy/fl) * spd;
+
+  z.x += z.vx * dt;
+  z.y += z.vy * dt;
+
+  if (hunterMode) {
+    // Bounce off walls
+    if (z.x < z.r)   { z.x = z.r;   z.vx =  Math.abs(z.vx); }
+    if (z.x > W-z.r) { z.x = W-z.r; z.vx = -Math.abs(z.vx); }
+    if (z.y < z.r)   { z.y = z.r;   z.vy =  Math.abs(z.vy); }
+    if (z.y > H-z.r) { z.y = H-z.r; z.vy = -Math.abs(z.vy); }
+  } else {
+    // Escaped screen → lose life
+    if (z.x < -65 || z.x > W+65 || z.y < -65 || z.y > H+65) {
+      lives--;
+      burst(Math.max(4, Math.min(W-4, z.x)), Math.max(4, Math.min(H-4, z.y)), '#ff4444', 10);
+      if (lives <= 0) { state = 'lose'; return; }
+      spawnEdge(z);
+    }
+  }
+
+  // Player touches zombie → kill
+  const cx = player.x - z.x, cy = player.y - z.y;
+  if (Math.sqrt(cx*cx + cy*cy) < player.r + z.r) {
+    kills++;
+    burst(z.x, z.y, hunterMode ? '#ff9900' : '#00ff88', 16);
+    if (kills >= KILL_TARGET) {
+      lastScore = Math.floor(timeLeft * 80) + lives * 500;
+      state = 'win';
+      if (window.onZombieHunterEnd) window.onZombieHunterEnd(lastScore, kills, lives, timeLeft);
+      return;
+    }
+    spawnEdge(z);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAW
+// ═══════════════════════════════════════════════════════
+let lastTS = 0;
+
+function frame(ts) {
+  const dt = Math.min((ts - lastTS) / 1000, 0.05);
+  lastTS = ts;
+  update(dt);
+
+  // BG
+  ctx.fillStyle = '#070a12';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(0,200,255,0.04)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= W; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = 0; y <= H; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  if (state === 'menu') { drawMenu(ts); requestAnimationFrame(frame); return; }
+
+  // Hunter mode border pulse
+  if (hunterMode && state === 'playing') {
+    ctx.save();
+    ctx.strokeStyle = `rgba(255,140,0,${0.45 + 0.3*Math.sin(ts*0.006)})`;
+    ctx.lineWidth = 10;
+    ctx.shadowBlur = 22; ctx.shadowColor = '#ff8800';
+    ctx.strokeRect(5, 5, W-10, H-10);
+    ctx.restore();
+  }
+
+  // Particles
+  for (const p of particles) {
+    ctx.globalAlpha = Math.max(0, p.life / p.ml);
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Zombies
+  for (const z of zombies) drawZombie(z, ts);
+
+  // Player
+  drawPlayer(ts);
+
+  // HUD
+  drawHUD(ts);
+
+  // End overlays
+  if (state === 'win')  drawEnd('CLEAR! 🎉', '#00ff88', `成功獵殺 ${KILL_TARGET} 隻殭屍！\n得分：${lastScore.toLocaleString()}`);
+  if (state === 'lose') drawEnd('GAME OVER', '#ff4444', lives <= 0 ? '殭屍全逃走了...' : '⏰ 時間到了！');
+
+  requestAnimationFrame(frame);
+}
+
+function drawPlayer(ts) {
+  const pulse = 0.85 + 0.15 * Math.sin(ts * 0.004);
+  ctx.save();
+  ctx.shadowBlur = 24 * pulse; ctx.shadowColor = '#00f5ff';
+  // Outer glow
+  const g = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, player.r * 1.8);
+  g.addColorStop(0, 'rgba(0,245,255,0.7)');
+  g.addColorStop(0.5, 'rgba(0,120,255,0.4)');
+  g.addColorStop(1, 'rgba(0,50,200,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(player.x, player.y, player.r * 1.8, 0, Math.PI*2); ctx.fill();
+  // Body
+  ctx.fillStyle = '#00f5ff';
+  ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2); ctx.fill();
+  // Icon
+  ctx.shadowBlur = 0;
+  ctx.font = `${player.r * 1.5}px sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('🏹', player.x, player.y + 1);
+  ctx.restore();
+}
+
+function drawZombie(z, ts) {
+  const col  = hunterMode ? '#ff9900' : '#33dd66';
+  const glow = hunterMode ? '#cc6600' : '#009933';
+  const pulse = 0.75 + 0.25 * Math.sin(ts * 0.003 + z.wobble);
+  ctx.save();
+  ctx.shadowBlur = 16 * pulse; ctx.shadowColor = glow;
+  // Glow halo
+  const g = ctx.createRadialGradient(z.x, z.y, 0, z.x, z.y, z.r * 1.6);
+  g.addColorStop(0, col + 'bb'); g.addColorStop(1, glow + '00');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(z.x, z.y, z.r * 1.6, 0, Math.PI*2); ctx.fill();
+  // Body
+  ctx.fillStyle = col;
+  ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, Math.PI*2); ctx.fill();
+  // Icon
+  ctx.shadowBlur = 0;
+  ctx.font = `${z.r * 1.5}px sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('🧟', z.x, z.y + 1);
+  ctx.restore();
+}
+
+function drawHUD(ts) {
+  const pad = 12;
+  ctx.shadowBlur = 0; ctx.textBaseline = 'top';
+
+  // Left: lives + kills
+  const heartOn = '❤️', heartOff = '🖤';
+  const livesStr = heartOn.repeat(lives) + heartOff.repeat(Math.max(0, 3-lives));
+  ctx.font = 'bold 13px Orbitron, sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'left';
+  ctx.fillText(`生命: ${livesStr}   擊殺: ${kills}/${KILL_TARGET}`, pad, pad);
+
+  // Right: timer
+  const m = Math.floor(timeLeft / 60).toString().padStart(2,'0');
+  const s = Math.floor(Math.max(0, timeLeft % 60)).toString().padStart(2,'0');
+  ctx.textAlign = 'right';
+  ctx.fillText(`剩餘時間: ${m}:${s}`, W - pad, pad);
+
+  // Center: hunter mode
+  ctx.textAlign = 'center';
+  if (hunterMode) {
+    ctx.fillStyle = '#ff9900';
+    ctx.shadowBlur = 12; ctx.shadowColor = '#ff9900';
+    ctx.font = 'bold 13px Orbitron, sans-serif';
+    ctx.fillText(`🔥 獵人模式  ${hunterTimer.toFixed(1)}s`, W/2, pad);
+    ctx.shadowBlur = 0;
+  } else {
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.font = '12px Orbitron, sans-serif';
+    ctx.fillText(`獵人模式: ${hunterTimer.toFixed(1)}s`, W/2, pad);
+  }
+
+  // Bottom hint
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('操作：方向鍵移動', pad, H - 18);
+  ctx.textAlign = 'right';
+  ctx.fillText('平衡調整：獵人模式下殭屍逃跑速度降低，且不會逃離畫面', W - pad, H - 18);
+}
+
+function drawMenu(ts) {
+  // Floating ghost zombies in BG
+  for (let i = 0; i < 6; i++) {
+    const bx = W * (0.12 + i * 0.15) + Math.sin(ts * 0.001 + i * 1.1) * 25;
+    const by = H * 0.55 + Math.cos(ts * 0.0009 + i * 0.8) * 30;
+    ctx.globalAlpha = 0.07;
+    ctx.font = '48px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#00ff88'; ctx.fillText('🧟', bx, by);
+  }
+  ctx.globalAlpha = 1;
+
+  ctx.save();
+  ctx.shadowBlur = 35; ctx.shadowColor = '#00ff88';
+  ctx.fillStyle = '#00ff88';
+  ctx.font = 'bold 42px Orbitron, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('殭屍獵人', W/2, H * 0.28);
+  ctx.restore();
+
+  ctx.fillStyle = '#bbb'; ctx.font = '14px sans-serif';
+  ctx.textAlign = 'center';
+  const lines = [
+    '🧟  殭屍會逃跑！觸碰到牠們來擊殺',
+    '❤️  殭屍逃出畫面外會扣一條命',
+    `🔥  獵人模式 (${HUNTER_DURATION}s)：殭屍減速，不逃離畫面`,
+    '',
+    `目標：擊殺 ${KILL_TARGET} 隻殭屍`,
+  ];
+  lines.forEach((l, i) => {
+    ctx.fillText(l, W/2, H * 0.44 + i * 26);
+  });
+
+  const blink = 0.6 + 0.4 * Math.sin(ts * 0.003);
+  ctx.fillStyle = `rgba(0,245,255,${blink})`;
+  ctx.font = 'bold 15px Orbitron, sans-serif';
+  ctx.fillText('按任意鍵 ／ 點擊 開始', W/2, H * 0.76);
+}
+
+function drawEnd(title, color, sub) {
+  ctx.fillStyle = 'rgba(7,10,18,0.85)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+  ctx.shadowBlur = 38; ctx.shadowColor = color;
+  ctx.fillStyle = color;
+  ctx.font = 'bold 52px Orbitron, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(title, W/2, H * 0.35);
+  ctx.restore();
+
+  ctx.fillStyle = '#ddd'; ctx.font = '17px sans-serif';
+  sub.split('\n').forEach((l, i) => {
+    ctx.fillText(l, W/2, H * 0.5 + i * 28);
+  });
+
+  const blink = 0.6 + 0.4 * Math.sin(Date.now() * 0.003);
+  ctx.fillStyle = `rgba(0,245,255,${blink})`;
+  ctx.font = 'bold 14px Orbitron, sans-serif';
+  ctx.fillText('按任意鍵 ／ 點擊 重新開始', W/2, H * 0.7);
+
+  // Leaderboard section (shown below if win)
+  if (state === 'win' && document.getElementById('lbBox')) {
+    document.getElementById('lbBox').style.display = 'block';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  START
+// ═══════════════════════════════════════════════════════
+requestAnimationFrame(frame);
+</script>
+
+<!-- ══════════════════════════════════════════════════
+     LEADERBOARD UI
+══════════════════════════════════════════════════ -->
+<div id="lbBox" style="display:none; position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+     width:min(420px,96vw); background:rgba(7,10,18,0.97); border:1px solid rgba(0,245,255,0.25);
+     border-radius:16px 16px 0 0; padding:18px 20px 24px; z-index:50; font-family:Orbitron,sans-serif;">
+  <div id="lbInput" style="text-align:center">
+    <p style="color:#aaa; font-size:0.85rem; margin-bottom:8px; font-family:sans-serif">留下名字，上排行榜！</p>
+    <input id="lbName" type="text" maxlength="8" placeholder="名字或座號（最多 8 字）"
+      style="width:100%; padding:9px 14px; font-size:1rem; border-radius:5px;
+             border:1px solid #0ff; background:rgba(0,255,255,0.07); color:#fff;
+             text-align:center; margin-bottom:10px; outline:none; font-family:Orbitron,sans-serif;">
+    <div style="display:flex; gap:10px; justify-content:center">
+      <button id="lbSubmit" style="padding:10px 22px; font-size:0.9rem; font-family:Orbitron,sans-serif;
+              background:rgba(0,255,255,0.15); color:#0ff; border:1px solid #0ff;
+              border-radius:5px; cursor:pointer; font-weight:bold">送出 🚀</button>
+      <button id="lbSkip" style="padding:10px 22px; font-size:0.9rem; font-family:Orbitron,sans-serif;
+              background:rgba(255,255,255,0.07); color:#aaa; border:1px solid #555;
+              border-radius:5px; cursor:pointer; font-weight:bold">跳過</button>
+    </div>
+  </div>
+  <div id="lbList" style="display:none">
+    <h3 style="color:#0ff; text-align:center; font-size:0.9rem; letter-spacing:2px;
+               margin-bottom:10px; text-shadow:0 0 8px #0ff">[ 殭屍獵人 TOP 10 ]</h3>
+    <div id="lbRows"></div>
+    <button onclick="document.getElementById('lbBox').style.display='none'"
+      style="margin-top:12px; width:100%; padding:10px; background:rgba(0,255,255,0.1);
+             border:1px solid #0ff; color:#0ff; font-weight:bold; cursor:pointer;
+             border-radius:8px; font-family:Orbitron,sans-serif; font-size:0.9rem">關閉</button>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+(function() {
+  const CFG = {
+    apiKey: "AIzaSyCFVDsAvTx10-eshL3RYiSzyYlPFEvqyz8",
+    authDomain: "claude-code-project-3a0d3.firebaseapp.com",
+    projectId: "claude-code-project-3a0d3",
+    storageBucket: "claude-code-project-3a0d3.firebasestorage.app",
+    messagingSenderId: "451203824543",
+    appId: "1:451203824543:web:fa2e9bb8c2c0f69c339baa"
+  };
+  if (!firebase.apps.length) firebase.initializeApp(CFG);
+  const db  = firebase.firestore();
+  const COL = 'zombie_hunter';
+
+  let curScore = 0, curKills = 0, submitted = false;
+
+  window.onZombieHunterEnd = function(score, kills, livesLeft, timeLeft) {
+    curScore = score; curKills = kills;
+    submitted = false;
+    document.getElementById('lbSubmit').disabled = false;
+    document.getElementById('lbSubmit').textContent = '送出 🚀';
+    document.getElementById('lbName').value = '';
+    document.getElementById('lbInput').style.display = 'block';
+    document.getElementById('lbList').style.display  = 'none';
+    document.getElementById('lbBox').style.display   = 'block';
+  };
+
+  async function showLB(myName) {
+    document.getElementById('lbInput').style.display = 'none';
+    document.getElementById('lbList').style.display  = 'block';
+    const rows = document.getElementById('lbRows');
+    rows.innerHTML = '<p style="color:#666;font-size:.85rem;text-align:center">載入中...</p>';
+    try {
+      const snap = await db.collection(COL).orderBy('score','desc').limit(10).get();
+      const data = []; snap.forEach(d => data.push(d.data()));
+      if (!data.length) { rows.innerHTML = '<p style="color:#666;font-size:.85rem;text-align:center">還沒有紀錄！</p>'; return; }
+      const medals = ['🥇','🥈','🥉'];
+      rows.innerHTML = data.map((r,i) => {
+        const mine = myName && r.name === myName && r.score === curScore;
+        return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;
+                  margin-bottom:4px;border-radius:5px;font-size:.85rem;
+                  background:${mine ? 'rgba(0,255,255,0.15)' : 'rgba(0,255,255,0.06)'};
+                  border:1px solid ${mine ? '#0ff' : 'rgba(0,255,255,0.1)'}">
+          <span style="width:26px;color:#0ff;font-weight:700">${medals[i]||(i+1)}</span>
+          <span style="flex:1;color:#fff">${r.name}</span>
+          <span style="color:#0ff;font-weight:700;text-shadow:0 0 6px #0ff">${r.score.toLocaleString()}</span>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      rows.innerHTML = '<p style="color:#f44;font-size:.85rem;text-align:center">載入失敗，請確認網路</p>';
+    }
+  }
+
+  document.getElementById('lbSubmit').addEventListener('click', async function() {
+    if (submitted) return;
+    const name = document.getElementById('lbName').value.trim() || '匿名';
+    submitted = true; this.disabled = true; this.textContent = '送出中...';
+    try {
+      await db.collection(COL).add({
+        name, score: curScore, kills: curKills,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(e) { console.error(e); }
+    showLB(name);
+  });
+
+  document.getElementById('lbSkip').addEventListener('click', () => showLB(null));
+})();
+</script>
+</body>
+</html>
