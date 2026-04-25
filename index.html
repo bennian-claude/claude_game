@@ -3,88 +3,603 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>班級小遊戲</title>
+  <title>班級小遊戲 — Game Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --neon-cyan: #00f5ff;
+      --neon-purple: #bf5fff;
+      --neon-pink: #ff2d78;
+      --bg-dark: #070a12;
+    }
+
     body {
       font-family: "Noto Sans TC", sans-serif;
-      background: #f0f4ff;
+      background: var(--bg-dark);
+      color: #e8eaf6;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 2rem;
+      overflow-x: hidden;
     }
-    h1 {
-      font-size: 2rem;
-      color: #3b5bdb;
-      margin-bottom: 0.5rem;
+
+    /* starfield */
+    #starfield { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+    /* grid lines */
+    body::before {
+      content: "";
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,245,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,245,255,0.025) 1px, transparent 1px);
+      background-size: 48px 48px;
+      z-index: 1; pointer-events: none;
     }
-    p.subtitle {
-      color: #666;
-      margin-bottom: 2rem;
+
+    .page {
+      position: relative; z-index: 2;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 0 1.5rem 5rem;
     }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 5rem 1rem 2.5rem;
+    }
+    .hero-badge {
+      display: inline-block;
+      font-family: "Orbitron", monospace;
+      font-size: 0.65rem; letter-spacing: 0.25em; text-transform: uppercase;
+      color: var(--neon-cyan);
+      border: 1px solid var(--neon-cyan);
+      padding: 0.3em 1.1em; border-radius: 100px; margin-bottom: 1.5rem;
+      box-shadow: 0 0 14px rgba(0,245,255,0.3), inset 0 0 8px rgba(0,245,255,0.08);
+      animation: badgePulse 3s ease-in-out infinite;
+    }
+    @keyframes badgePulse {
+      0%,100% { box-shadow: 0 0 14px rgba(0,245,255,0.3), inset 0 0 8px rgba(0,245,255,0.08); }
+      50%      { box-shadow: 0 0 28px rgba(0,245,255,0.6), inset 0 0 16px rgba(0,245,255,0.15); }
+    }
+    .hero-title {
+      font-family: "Orbitron", monospace;
+      font-size: clamp(2.4rem, 6vw, 4.8rem);
+      font-weight: 900; line-height: 1.1;
+      background: linear-gradient(135deg, #fff 20%, var(--neon-cyan) 52%, var(--neon-purple) 85%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      filter: drop-shadow(0 0 22px rgba(0,245,255,0.4));
+      margin-bottom: 0.75rem;
+    }
+    .hero-sub { font-size: 1rem; color: rgba(255,255,255,0.4); letter-spacing: 0.05em; }
+    .hero-sub span { color: var(--neon-cyan); font-weight: 700; }
+
+    /* ── Divider ── */
+    .divider {
+      width: 100%; max-width: 960px;
+      display: flex; align-items: center; gap: 1rem;
+      margin: 0.5rem 0 2.5rem;
+    }
+    .divider::before,.divider::after {
+      content:""; flex:1; height:1px;
+      background: linear-gradient(90deg,transparent,rgba(0,245,255,0.3),transparent);
+    }
+    .divider span {
+      font-family:"Orbitron",monospace; font-size:0.62rem;
+      letter-spacing:0.2em; color:rgba(0,245,255,0.5); white-space:nowrap; text-transform:uppercase;
+    }
+
+    /* ── Game Grid ── */
     .game-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 1.5rem;
-      width: 100%;
-      max-width: 800px;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.75rem;
+      width: 100%; max-width: 960px;
     }
+
+    /* ── Game Card ── */
     .game-card {
-      background: white;
-      border-radius: 12px;
-      padding: 1.5rem;
-      text-align: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      text-decoration: none; color: inherit;
       cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.15s;
-      text-decoration: none;
-      color: inherit;
-      display: block;
+      background: #0d1120;
+      border: 1px solid rgba(255,255,255,0.07);
+      transition: transform 0.3s cubic-bezier(.22,1,.36,1), box-shadow 0.3s, border-color 0.3s;
+      display: flex; flex-direction: column;
     }
     .game-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+      transform: translateY(-8px) scale(1.02);
+      border-color: var(--c-accent, var(--neon-cyan));
+      box-shadow:
+        0 0 32px color-mix(in srgb, var(--c-accent, var(--neon-cyan)) 35%, transparent),
+        0 16px 48px rgba(0,0,0,0.7);
     }
-    .game-card .icon { font-size: 3rem; margin-bottom: 0.75rem; }
-    .game-card h2 { font-size: 1.1rem; color: #333; margin-bottom: 0.4rem; }
-    .game-card p { font-size: 0.85rem; color: #888; }
-    .empty {
-      color: #aaa;
-      margin-top: 3rem;
-      font-size: 1rem;
+
+    /* artwork canvas */
+    .card-art {
+      width: 100%;
+      aspect-ratio: 16/9;
+      display: block;
+      position: relative;
     }
+    .card-art canvas {
+      width: 100%; height: 100%;
+      display: block;
+    }
+
+    /* shine sweep on hover */
+    .card-art::after {
+      content:"";
+      position: absolute; inset:0;
+      background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.07) 50%, transparent 70%);
+      transform: translateX(-100%);
+      transition: transform 0s;
+    }
+    .game-card:hover .card-art::after {
+      transform: translateX(100%);
+      transition: transform 0.6s ease;
+    }
+
+    /* bottom info */
+    .card-body {
+      padding: 1.25rem 1.4rem 1.4rem;
+      display: flex; flex-direction: column; gap: 0.5rem;
+      flex: 1;
+    }
+    .card-meta {
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .card-tag {
+      font-family: "Orbitron", monospace;
+      font-size: 0.58rem; letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--c-accent, var(--neon-cyan));
+      border: 1px solid currentColor;
+      padding: 0.15em 0.65em; border-radius: 100px;
+    }
+    .card-stars { font-size: 0.75rem; color: #ffe600; letter-spacing: -1px; }
+    .card-name {
+      font-size: 1.25rem; font-weight: 900; color: #fff;
+      letter-spacing: 0.01em; line-height: 1.2;
+    }
+    .card-desc { font-size: 0.83rem; color: rgba(255,255,255,0.42); line-height: 1.65; }
+    .card-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 0.75rem; padding-top: 0.85rem;
+      border-top: 1px solid rgba(255,255,255,0.07);
+    }
+    .card-play-btn {
+      font-family: "Orbitron", monospace;
+      font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+      color: #000;
+      background: var(--c-accent, var(--neon-cyan));
+      padding: 0.45em 1.1em; border-radius: 6px;
+      box-shadow: 0 0 14px color-mix(in srgb, var(--c-accent, var(--neon-cyan)) 50%, transparent);
+      transition: filter 0.2s, transform 0.2s;
+    }
+    .game-card:hover .card-play-btn {
+      filter: brightness(1.2);
+      transform: scale(1.05);
+    }
+    .card-num {
+      font-family: "Orbitron", monospace;
+      font-size: 0.7rem; letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.15);
+    }
+
+    /* ── Footer ── */
+    footer {
+      position: relative; z-index: 2;
+      text-align: center; padding: 2rem;
+      font-size: 0.72rem; color: rgba(255,255,255,0.18); letter-spacing: 0.05em;
+    }
+    footer span { color: rgba(0,245,255,0.4); }
   </style>
 </head>
 <body>
-  <h1>🎮 班級小遊戲</h1>
-  <p class="subtitle">選一個遊戲開始玩吧！</p>
 
-  <div class="game-grid" id="gameGrid">
-    <!-- 遊戲卡片會在這裡新增 -->
-  </div>
-  <p class="empty" id="emptyMsg">目前還沒有遊戲，快去新增一個！</p>
+<canvas id="starfield"></canvas>
 
-  <script>
-    const games = [
-      { name: "射氣球大作戰", desc: "20 秒射爆氣球！Canvas + 音效版", icon: "🎈", url: "games/balloon-shooter/index.html" },
-      { name: "Rhythm", desc: "節奏感應遊戲", icon: "🎵", url: "games/rhythm-game/index.html" },
-    ];
+<div class="page">
+  <header class="hero">
+    <div class="hero-badge">🎮 &nbsp;Game Hub &nbsp;·&nbsp; Class Edition</div>
+    <h1 class="hero-title">班級小遊戲</h1>
+    <p class="hero-sub">選一個遊戲，<span>開始競技</span>！</p>
+  </header>
 
-    const grid = document.getElementById("gameGrid");
-    const emptyMsg = document.getElementById("emptyMsg");
+  <div class="divider"><span>// select your game</span></div>
 
-    if (games.length > 0) {
-      emptyMsg.style.display = "none";
-      games.forEach(g => {
-        const card = document.createElement("a");
-        card.className = "game-card";
-        card.href = g.url;
-        card.innerHTML = `<div class="icon">${g.icon}</div><h2>${g.name}</h2><p>${g.desc}</p>`;
-        grid.appendChild(card);
-      });
+  <main class="game-grid" id="gameGrid"></main>
+</div>
+
+<footer>GAME HUB &nbsp;·&nbsp; <span>班級互動平台</span> &nbsp;·&nbsp; Built with Claude Code</footer>
+
+<!-- ══════════════════ STARFIELD ══════════════════ -->
+<script>
+(function(){
+  const c = document.getElementById("starfield");
+  const ctx = c.getContext("2d");
+  let stars=[];
+  function resize(){
+    c.width=innerWidth; c.height=innerHeight;
+    stars=Array.from({length:180},()=>({
+      x:Math.random()*c.width, y:Math.random()*c.height,
+      r:Math.random()*1.2+0.2, a:Math.random()*0.6+0.1,
+      sp:Math.random()*0.015+0.004, ph:Math.random()*Math.PI*2
+    }));
+  }
+  function draw(t){
+    ctx.clearRect(0,0,c.width,c.height);
+    stars.forEach(s=>{
+      const a=s.a*(0.65+0.35*Math.sin(t*s.sp*60+s.ph));
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(200,230,255,${a})`; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  addEventListener("resize",resize); resize(); requestAnimationFrame(draw);
+})();
+</script>
+
+<!-- ══════════════════ CARD ART PAINTERS ══════════════════ -->
+<script>
+/* ── Painter 1: Balloon Shooter ─────────────────────────── */
+function paintBalloonShooter(canvas) {
+  const W = canvas.width = 560, H = canvas.height = 315;
+  const ctx = canvas.getContext("2d");
+
+  // balloons state
+  const COLORS = ["#ff4d6d","#ff9500","#ffdd00","#69db7c","#74c0fc","#cc5de8","#ff6b9d"];
+  const balloons = Array.from({length:14}, (_, i) => ({
+    x: 60 + (i % 7) * 70 + Math.random()*20,
+    y: H + 60 + Math.random() * 120,
+    vy: -(0.55 + Math.random()*0.5),
+    r: 22 + Math.random()*12,
+    color: COLORS[i % COLORS.length],
+    wobble: Math.random()*Math.PI*2,
+    wSpeed: 0.025 + Math.random()*0.015,
+    popped: false,
+    popFrame: 0
+  }));
+
+  // crosshair
+  let aim = {x: W/2, y: H/2, tx: W*0.35, ty: H*0.45, speed: 0.018};
+  const aimTargets = [{x:W*0.35,y:H*0.45},{x:W*0.6,y:H*0.3},{x:W*0.2,y:H*0.55},{x:W*0.75,y:H*0.5},{x:W*0.5,y:H*0.38}];
+  let aimIdx = 0;
+
+  // particles
+  const particles = [];
+  function spawnParticles(x, y, color) {
+    for (let i=0;i<14;i++) {
+      const a = Math.random()*Math.PI*2;
+      const sp = 2+Math.random()*4;
+      particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:3+Math.random()*3,
+        color, alpha:1, life:0, maxLife:28+Math.random()*12});
     }
-  </script>
+  }
+
+  let frame = 0;
+  function draw() {
+    frame++;
+    // background
+    const bg = ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,"#0b1a2e"); bg.addColorStop(1,"#1a0b2e");
+    ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+
+    // far stars
+    ctx.fillStyle="rgba(255,255,255,0.5)";
+    for(let i=0;i<60;i++){
+      const sx=((i*137+23)%W), sy=((i*79+11)%H);
+      ctx.fillRect(sx,sy,1,1);
+    }
+
+    // clouds
+    for(let c=0;c<3;c++){
+      const cx = ((frame*0.18+c*180)%( W+160))-80;
+      const cy = 40+c*28;
+      ctx.fillStyle=`rgba(255,255,255,${0.04+c*0.02})`;
+      ctx.beginPath(); ctx.ellipse(cx,cy,60+c*20,18,0,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx+30,cy-10,40,14,0,0,Math.PI*2); ctx.fill();
+    }
+
+    // move aim toward target
+    aim.x += (aim.tx - aim.x)*aim.speed;
+    aim.y += (aim.ty - aim.y)*aim.speed;
+    if(Math.abs(aim.x-aim.tx)<2 && Math.abs(aim.y-aim.ty)<2){
+      aimIdx=(aimIdx+1)%aimTargets.length;
+      aim.tx=aimTargets[aimIdx].x; aim.ty=aimTargets[aimIdx].y;
+      // find nearest balloon to aim
+      let nearest=null, dist=1e9;
+      balloons.forEach(b=>{ if(!b.popped){ const d=Math.hypot(b.x-aim.tx,b.y-aim.ty); if(d<dist){dist=d;nearest=b;} }});
+      if(nearest && dist<50){ nearest.popped=true; spawnParticles(nearest.x,nearest.y,nearest.color); }
+    }
+
+    // balloons
+    balloons.forEach(b => {
+      if(b.popped){
+        b.popFrame++;
+        if(b.popFrame>40){ b.y=H+80; b.x=50+Math.random()*460; b.vy=-(0.55+Math.random()*0.5); b.popped=false; b.popFrame=0; }
+        return;
+      }
+      b.y += b.vy;
+      b.wobble += b.wSpeed;
+      const wx = Math.sin(b.wobble)*3;
+      if(b.y < -b.r*2) { b.y = H+60; b.x=50+Math.random()*460; }
+      const bx = b.x+wx, by = b.y;
+
+      // shadow
+      ctx.save();
+      ctx.shadowColor=b.color; ctx.shadowBlur=18;
+      // balloon body
+      const g = ctx.createRadialGradient(bx-b.r*0.3,by-b.r*0.35,b.r*0.05,bx,by,b.r);
+      g.addColorStop(0,"rgba(255,255,255,0.9)");
+      g.addColorStop(0.3,b.color);
+      g.addColorStop(1, b.color.replace(")",",0.7)").replace("rgb","rgba"));
+      ctx.fillStyle=g;
+      ctx.beginPath();
+      ctx.ellipse(bx, by, b.r*0.85, b.r, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+
+      // knot
+      ctx.fillStyle=b.color;
+      ctx.beginPath(); ctx.ellipse(bx,by+b.r,3,4,0,0,Math.PI*2); ctx.fill();
+      // string
+      ctx.strokeStyle="rgba(255,255,255,0.18)"; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(bx,by+b.r+3);
+      ctx.bezierCurveTo(bx+8,by+b.r+20,bx-5,by+b.r+35,bx+3,by+b.r+50); ctx.stroke();
+    });
+
+    // particles
+    for(let i=particles.length-1;i>=0;i--){
+      const p=particles[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.18;
+      p.life++; p.alpha=1-p.life/p.maxLife;
+      if(p.alpha<=0){particles.splice(i,1);continue;}
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r*p.alpha,0,Math.PI*2);
+      ctx.fillStyle=p.color+Math.floor(p.alpha*255).toString(16).padStart(2,"0");
+      ctx.fill();
+    }
+
+    // crosshair
+    const cx=aim.x, cy=aim.y;
+    ctx.save();
+    ctx.strokeStyle="rgba(255,60,60,0.9)"; ctx.lineWidth=1.5;
+    // outer ring
+    ctx.beginPath(); ctx.arc(cx,cy,18,0,Math.PI*2); ctx.stroke();
+    // inner ring
+    ctx.strokeStyle="rgba(255,60,60,0.5)";
+    ctx.beginPath(); ctx.arc(cx,cy,8,0,Math.PI*2); ctx.stroke();
+    // crosslines
+    ctx.strokeStyle="rgba(255,60,60,0.85)"; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(cx-26,cy); ctx.lineTo(cx-10,cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx+10,cy); ctx.lineTo(cx+26,cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx,cy-26); ctx.lineTo(cx,cy-10); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx,cy+10); ctx.lineTo(cx,cy+26); ctx.stroke();
+    // center dot
+    ctx.fillStyle="rgba(255,60,60,0.9)";
+    ctx.beginPath(); ctx.arc(cx,cy,2,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    // vignette
+    const vg = ctx.createRadialGradient(W/2,H/2,H*0.3,W/2,H/2,H*0.85);
+    vg.addColorStop(0,"transparent"); vg.addColorStop(1,"rgba(0,0,0,0.55)");
+    ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+
+    // title overlay
+    ctx.font="bold 13px 'Orbitron',monospace";
+    ctx.fillStyle="rgba(255,255,255,0.08)";
+    ctx.fillText("BALLOON SHOOTER", 14, H-14);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+/* ── Painter 2: Rhythm Game ─────────────────────────────── */
+function paintRhythm(canvas) {
+  const W = canvas.width = 560, H = canvas.height = 315;
+  const ctx = canvas.getContext("2d");
+
+  const TRACKS = 5;
+  const NOTE_COLORS = ["#ff2d78","#ff9500","#00f5ff","#bf5fff","#69db7c"];
+  const trackX = Array.from({length:TRACKS},(_, i)=> W*0.18 + i*(W*0.65/(TRACKS-1)));
+  const HIT_Y = H - 52;
+  const NOTE_W = 32, NOTE_H = 14;
+
+  const notes = [];
+  let spawnTimer = 0;
+  let frame = 0;
+
+  function spawnNote(){
+    const t = Math.floor(Math.random()*TRACKS);
+    notes.push({t, x:trackX[t], y:-NOTE_H, speed:3.2+Math.random()*1.2, alpha:1, hit:false, hitFrame:0});
+  }
+
+  // EQ bars state
+  const EQ_BARS = 48;
+  const eqH = Array.from({length:EQ_BARS},()=>Math.random());
+  const eqTarget = Array.from({length:EQ_BARS},()=>Math.random());
+
+  // particles
+  const particles=[];
+  function spawnHitParticles(x,y,color){
+    for(let i=0;i<10;i++){
+      const a=Math.random()*Math.PI*2, sp=2+Math.random()*3.5;
+      particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-1,
+        r:2+Math.random()*3,color,alpha:1,life:0,maxLife:22+Math.random()*8});
+    }
+  }
+
+  function draw(){
+    frame++;
+    // bg
+    const bg=ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,"#0a0616"); bg.addColorStop(1,"#120b24");
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+    // EQ bars (background ambience)
+    for(let i=0;i<EQ_BARS;i++){
+      if(Math.random()<0.08) eqTarget[i]=Math.random();
+      eqH[i]+=(eqTarget[i]-eqH[i])*0.09;
+      const bx = i*(W/EQ_BARS), bh = eqH[i]*H*0.55;
+      const hue = 260+i*3;
+      ctx.fillStyle=`hsla(${hue},80%,65%,0.12)`;
+      ctx.fillRect(bx, H-bh, W/EQ_BARS-1, bh);
+    }
+
+    // track lanes
+    for(let t=0;t<TRACKS;t++){
+      const x = trackX[t];
+      // lane line
+      ctx.strokeStyle=`rgba(255,255,255,0.07)`; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
+      // hit zone glow
+      const hg = ctx.createRadialGradient(x,HIT_Y,0,x,HIT_Y,28);
+      hg.addColorStop(0,NOTE_COLORS[t].replace("rgb","rgba").replace(")",",0.35)"));
+      hg.addColorStop(1,"transparent");
+      ctx.fillStyle=hg; ctx.fillRect(x-30,HIT_Y-28,60,56);
+      // hit ring
+      ctx.strokeStyle=NOTE_COLORS[t]+"55"; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(x,HIT_Y,14,0,Math.PI*2); ctx.stroke();
+    }
+
+    // spawn notes
+    spawnTimer++;
+    if(spawnTimer > 22) { spawnNote(); spawnTimer=0; if(Math.random()<0.3)spawnNote(); }
+
+    // notes
+    for(let i=notes.length-1;i>=0;i--){
+      const n=notes[i];
+      if(n.hit){ n.hitFrame++; n.alpha=1-n.hitFrame/14; if(n.alpha<=0){notes.splice(i,1);continue;} }
+      else { n.y+=n.speed; }
+      if(!n.hit && n.y>H+NOTE_H){notes.splice(i,1);continue;}
+      // auto-hit when close
+      if(!n.hit && Math.abs(n.y-HIT_Y)<8){
+        n.hit=true; spawnHitParticles(n.x,HIT_Y,NOTE_COLORS[n.t]);
+      }
+
+      ctx.save();
+      ctx.globalAlpha=n.alpha;
+      ctx.shadowColor=NOTE_COLORS[n.t]; ctx.shadowBlur=14;
+      const ng=ctx.createLinearGradient(n.x-NOTE_W/2,n.y-NOTE_H/2,n.x+NOTE_W/2,n.y+NOTE_H/2);
+      ng.addColorStop(0,"rgba(255,255,255,0.9)");
+      ng.addColorStop(0.4,NOTE_COLORS[n.t]);
+      ng.addColorStop(1,NOTE_COLORS[n.t]+"aa");
+      ctx.fillStyle=ng;
+      ctx.beginPath();
+      ctx.roundRect(n.x-NOTE_W/2,n.y-NOTE_H/2,NOTE_W,NOTE_H,6);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // particles
+    for(let i=particles.length-1;i>=0;i--){
+      const p=particles[i]; p.x+=p.vx; p.y+=p.vy; p.life++;
+      p.alpha=1-p.life/p.maxLife;
+      if(p.alpha<=0){particles.splice(i,1);continue;}
+      ctx.globalAlpha=p.alpha;
+      ctx.fillStyle=p.color; ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha=1;
+    }
+
+    // score flash
+    if(frame%90<18){
+      const score = Math.floor(frame/90)*1200+8400;
+      ctx.font="bold 22px 'Orbitron',monospace";
+      ctx.textAlign="right";
+      ctx.fillStyle=`rgba(255,255,255,${0.7*(1-(frame%90)/18)})`;
+      ctx.fillText(score.toLocaleString(), W-16, 34);
+      ctx.textAlign="left";
+    }
+
+    // combo flash
+    if(frame%70<14){
+      ctx.font="bold 12px 'Orbitron',monospace";
+      ctx.fillStyle=`rgba(0,245,255,${0.8*(1-(frame%70)/14)})`;
+      ctx.fillText("PERFECT!", 16, H-16);
+    }
+
+    // vignette
+    const vg=ctx.createRadialGradient(W/2,H/2,H*0.25,W/2,H/2,H*0.85);
+    vg.addColorStop(0,"transparent"); vg.addColorStop(1,"rgba(0,0,0,0.6)");
+    ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+
+    ctx.font="bold 13px 'Orbitron',monospace";
+    ctx.fillStyle="rgba(255,255,255,0.07)";
+    ctx.fillText("RHYTHM MASTER", 14, H-14);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+</script>
+
+<!-- ══════════════════ GAME DATA + CARD BUILDER ══════════════════ -->
+<script>
+const games = [
+  {
+    name: "射氣球大作戰",
+    desc: "20 秒射爆所有氣球！考驗你的眼力與手速，衝上排行榜第一名。",
+    tag: "Action",
+    accent: "#ff2d78",
+    stars: "★★★★☆",
+    url: "games/balloon-shooter/index.html",
+    painter: "balloon"
+  },
+  {
+    name: "Rhythm 節奏",
+    desc: "踩準每一拍，選難度挑戰極限，PERFECT 連擊登上排行榜！",
+    tag: "Music",
+    accent: "#bf5fff",
+    stars: "★★★★★",
+    url: "games/rhythm-game/index.html",
+    painter: "rhythm"
+  },
+];
+
+const grid = document.getElementById("gameGrid");
+
+games.forEach((g, i) => {
+  const card = document.createElement("a");
+  card.className = "game-card";
+  card.href = g.url;
+  card.style.setProperty("--c-accent", g.accent);
+
+  // art wrapper
+  const artDiv = document.createElement("div");
+  artDiv.className = "card-art";
+  const cvs = document.createElement("canvas");
+  artDiv.appendChild(cvs);
+  card.appendChild(artDiv);
+
+  // body
+  card.insertAdjacentHTML("beforeend", `
+    <div class="card-body">
+      <div class="card-meta">
+        <span class="card-tag">${g.tag}</span>
+        <span class="card-stars">${g.stars}</span>
+      </div>
+      <div class="card-name">${g.name}</div>
+      <div class="card-desc">${g.desc}</div>
+      <div class="card-footer">
+        <div class="card-play-btn">▶ 開始遊玩</div>
+        <div class="card-num">0${i+1}</div>
+      </div>
+    </div>
+  `);
+
+  grid.appendChild(card);
+
+  // start painter after layout
+  requestAnimationFrame(() => {
+    if(g.painter === "balloon") paintBalloonShooter(cvs);
+    if(g.painter === "rhythm")  paintRhythm(cvs);
+  });
+});
+</script>
+
 </body>
 </html>
