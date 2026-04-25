@@ -14,6 +14,31 @@
       height: 100dvh; overflow: hidden; touch-action: none;
     }
     canvas { display: block; border-radius: 12px; }
+    #endActions {
+      display: none;
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      z-index: 45;
+      gap: 10px;
+      width: min(420px, 94vw);
+    }
+    #endActions button, .home-link-btn {
+      flex: 1;
+      padding: 11px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(0,245,255,0.7);
+      background: rgba(0,245,255,0.12);
+      color: #0ff;
+      cursor: pointer;
+      font: 700 0.9rem Orbitron, sans-serif;
+    }
+    #endActions .home-link-btn, .home-link-btn {
+      border-color: rgba(255,255,255,0.38);
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+    }
 
     /* ── D-pad ── */
     #dpad {
@@ -47,6 +72,10 @@
   <div id="dp-cx"></div>
   <div class="dp" id="dp-right">→</div>
   <div class="dp" id="dp-down">↓</div>
+</div>
+<div id="endActions">
+  <button type="button" onclick="startGame()">再玩一次</button>
+  <button class="home-link-btn" type="button" onclick="window.location.href='../../index.html'">回主畫面</button>
 </div>
 
 <script>
@@ -171,6 +200,9 @@ canvas.addEventListener('pointerdown', () => { if (state !== 'playing') startGam
 //  GAME LOGIC
 // ═══════════════════════════════════════════════════════
 function startGame() {
+  document.getElementById('endActions').style.display = 'none';
+  const lbBox = document.getElementById('lbBox');
+  if (lbBox) lbBox.style.display = 'none';
   kills = 0; lives = 3;
   timeLeft  = TOTAL_TIME;
   hunterMode  = false;
@@ -476,6 +508,7 @@ function drawMenu(ts) {
 }
 
 function drawEnd(title, color, sub) {
+  document.getElementById('endActions').style.display = 'flex';
   ctx.fillStyle = 'rgba(7,10,18,0.85)';
   ctx.fillRect(0, 0, W, H);
 
@@ -529,6 +562,8 @@ requestAnimationFrame(frame);
               background:rgba(255,255,255,0.07); color:#aaa; border:1px solid #555;
               border-radius:5px; cursor:pointer; font-weight:bold">跳過</button>
     </div>
+    <button class="home-link-btn" type="button" onclick="window.location.href='../../index.html'"
+      style="margin-top:10px; width:100%">回主畫面</button>
   </div>
   <div id="lbList" style="display:none">
     <h3 style="color:#0ff; text-align:center; font-size:0.9rem; letter-spacing:2px;
@@ -538,6 +573,8 @@ requestAnimationFrame(frame);
       style="margin-top:12px; width:100%; padding:10px; background:rgba(0,255,255,0.1);
              border:1px solid #0ff; color:#0ff; font-weight:bold; cursor:pointer;
              border-radius:8px; font-family:Orbitron,sans-serif; font-size:0.9rem">關閉</button>
+    <button class="home-link-btn" type="button" onclick="window.location.href='../../index.html'"
+      style="margin-top:10px; width:100%">回主畫面</button>
   </div>
 </div>
 

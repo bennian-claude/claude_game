@@ -123,6 +123,65 @@
       background: linear-gradient(135deg, var(--ember), var(--venom));
     }
 
+    .entry-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      place-items: center;
+      padding: 1.5rem;
+      background:
+        radial-gradient(circle at 50% 35%, rgba(0,245,255,0.14), transparent 22rem),
+        rgba(3,5,9,0.88);
+      backdrop-filter: blur(18px);
+      transition: opacity 0.45s ease, visibility 0.45s ease;
+    }
+
+    .entry-gate.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .entry-card {
+      width: min(460px, 100%);
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.035));
+      box-shadow: 0 30px 90px rgba(0,0,0,0.48);
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .entry-card strong {
+      display: block;
+      font-family: "Orbitron", monospace;
+      font-size: 1.35rem;
+      color: var(--paper);
+      letter-spacing: 0;
+      margin-bottom: 0.8rem;
+    }
+
+    .entry-card p {
+      color: var(--muted);
+      line-height: 1.8;
+      font-size: 0.95rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .entry-card button {
+      width: 100%;
+      border: 0;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--ember), var(--signal));
+      color: #06100b;
+      cursor: pointer;
+      padding: 0.9rem 1rem;
+      font: 900 0.82rem "Orbitron", monospace;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
     /* ── Hero ── */
     .hero {
       width: 100%;
@@ -595,6 +654,14 @@
 <body>
 
 <canvas id="starfield"></canvas>
+
+<div class="entry-gate" id="entryGate">
+  <div class="entry-card">
+    <strong>Ready Player?</strong>
+    <p>點一下進入遊戲大廳，背景音樂也會同步啟動。</p>
+    <button id="enterHubBtn" type="button">Enter Hub</button>
+  </div>
+</div>
 
 <div class="page">
   <nav class="topbar" aria-label="Game hub controls">
@@ -1281,6 +1348,8 @@ loadHomeLeaderboards();
 <script>
 (function(){
   const btn = document.getElementById("musicToggle");
+  const entryGate = document.getElementById("entryGate");
+  const enterHubBtn = document.getElementById("enterHubBtn");
   const bgm = new Audio("assets/audio/Ascent_into_Play.mp3");
   bgm.loop = true;
   bgm.preload = "metadata";
@@ -1304,6 +1373,16 @@ loadHomeLeaderboards();
     btn.setAttribute("aria-pressed", "false");
     btn.textContent = "Music Off";
   }
+
+  async function enterHub() {
+    await start();
+    entryGate.classList.add("is-hidden");
+  }
+
+  enterHubBtn.addEventListener("click", enterHub);
+  entryGate.addEventListener("click", (event) => {
+    if (event.target === entryGate) enterHub();
+  });
 
   btn.addEventListener("click", () => {
     if (!bgm.paused) stop();
