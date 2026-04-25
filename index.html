@@ -1281,115 +1281,37 @@ loadHomeLeaderboards();
 <script>
 (function(){
   const btn = document.getElementById("musicToggle");
-  let audioCtx = null;
-  let master = null;
-  let delay = null;
-  let feedback = null;
-  let timer = null;
-  let step = 0;
-  const bpm = 92;
-  const beatMs = 60000 / bpm / 2;
-  const progression = [
-    [196.00, 246.94, 293.66, 392.00],
-    [174.61, 220.00, 261.63, 349.23],
-    [164.81, 207.65, 246.94, 329.63],
-    [146.83, 196.00, 246.94, 293.66]
-  ];
-
-  function setup() {
-    if (audioCtx) return;
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) {
-      btn.textContent = "Music N/A";
-      btn.disabled = true;
-      return;
-    }
-    audioCtx = new AC();
-    master = audioCtx.createGain();
-    master.gain.value = 0.0001;
-    delay = audioCtx.createDelay();
-    delay.delayTime.value = 0.28;
-    feedback = audioCtx.createGain();
-    feedback.gain.value = 0.28;
-    delay.connect(feedback).connect(delay);
-    delay.connect(master);
-    master.connect(audioCtx.destination);
-  }
-
-  function tone(freq, time, dur, type, vol, dest = master) {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, time);
-    gain.gain.setValueAtTime(0.0001, time);
-    gain.gain.exponentialRampToValueAtTime(vol, time + 0.015);
-    gain.gain.exponentialRampToValueAtTime(0.0001, time + dur);
-    osc.connect(gain).connect(dest);
-    osc.start(time);
-    osc.stop(time + dur + 0.05);
-  }
-
-  function noiseHat(time) {
-    const length = audioCtx.sampleRate * 0.06;
-    const buffer = audioCtx.createBuffer(1, length, audioCtx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / length);
-    const src = audioCtx.createBufferSource();
-    const filter = audioCtx.createBiquadFilter();
-    const gain = audioCtx.createGain();
-    filter.type = "highpass";
-    filter.frequency.value = 4800;
-    gain.gain.setValueAtTime(0.025, time);
-    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.055);
-    src.buffer = buffer;
-    src.connect(filter).connect(gain).connect(master);
-    src.start(time);
-  }
-
-  function tick() {
-    if (!audioCtx) return;
-    const now = audioCtx.currentTime + 0.03;
-    const chord = progression[Math.floor(step / 8) % progression.length];
-    const note = chord[step % chord.length] * (step % 16 === 15 ? 2 : 1);
-    tone(chord[0] / 2, now, 0.34, "triangle", step % 8 === 0 ? 0.12 : 0.055);
-    tone(note, now, 0.18, "sine", 0.05, delay);
-    if (step % 4 === 2) tone(note * 1.5, now + 0.08, 0.16, "sine", 0.035, delay);
-    if (step % 2 === 0) noiseHat(now);
-    step++;
-  }
+  const bgm = new Audio("assets/audio/Ascent_into_Play.mp3");
+  bgm.loop = true;
+  bgm.preload = "metadata";
+  bgm.volume = 0.45;
 
   async function start() {
-    setup();
-    if (!audioCtx) return;
-    await audioCtx.resume();
-    master.gain.cancelScheduledValues(audioCtx.currentTime);
-    master.gain.exponentialRampToValueAtTime(0.42, audioCtx.currentTime + 0.6);
-    tick();
-    timer = setInterval(tick, beatMs);
-    btn.classList.add("is-on");
-    btn.setAttribute("aria-pressed", "true");
-    btn.textContent = "Music On";
+    try {
+      await bgm.play();
+      btn.classList.add("is-on");
+      btn.setAttribute("aria-pressed", "true");
+      btn.textContent = "Music On";
+    } catch (error) {
+      btn.textContent = "Music Blocked";
+      console.error("Unable to play background music", error);
+    }
   }
 
   function stop() {
-    if (timer) clearInterval(timer);
-    timer = null;
-    if (master && audioCtx) {
-      master.gain.cancelScheduledValues(audioCtx.currentTime);
-      master.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.35);
-    }
+    bgm.pause();
     btn.classList.remove("is-on");
     btn.setAttribute("aria-pressed", "false");
     btn.textContent = "Music Off";
   }
 
   btn.addEventListener("click", () => {
-    if (timer) stop();
+    if (!bgm.paused) stop();
     else start();
   });
 
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden && timer) stop();
+    if (document.hidden && !bgm.paused) stop();
   });
 })();
 </script>
