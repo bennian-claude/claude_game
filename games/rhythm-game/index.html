@@ -63,6 +63,20 @@
             font-size: 2.5rem; color: #fff; font-family: '微軟正黑體', sans-serif;
             letter-spacing: 8px; opacity: 0; text-align: center; text-shadow: 0 0 10px rgba(255,255,255,0.3);
         }
+        #skipIntroBtn {
+            position: fixed; right: 24px; bottom: 24px; z-index: 1000;
+            padding: 12px 22px; border-radius: 8px;
+            border: 1px solid rgba(0,255,255,0.62);
+            background: rgba(0,0,0,0.55); color: #0ff;
+            font-family: 'Orbitron', sans-serif; font-size: 0.9rem; font-weight: 900;
+            letter-spacing: 2px; text-transform: uppercase; cursor: pointer;
+            box-shadow: 0 0 18px rgba(0,255,255,0.18);
+            transition: transform 0.18s, background 0.18s, color 0.18s;
+        }
+        #skipIntroBtn:hover { transform: translateY(-2px); background: #0ff; color: #000; }
+        @media (max-width: 640px) {
+            #skipIntroBtn { right: 14px; bottom: 14px; padding: 10px 16px; font-size: 0.78rem; }
+        }
 
         #creepyText {
             position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%);
@@ -267,7 +281,10 @@
     </div>
 
     <!-- 各種特效與選單 -->
-    <div id="introScreen" class="overlay"><div id="introText"></div></div>
+    <div id="introScreen" class="overlay">
+        <div id="introText"></div>
+        <button id="skipIntroBtn" type="button">Skip Intro</button>
+    </div>
 
     <!-- 彩蛋 2：假相機權限視窗 -->
     <div id="fakePermissionBox">
@@ -430,6 +447,9 @@
         const scoreEl = document.getElementById('scoreDisplay'), comboEl = document.getElementById('comboDisplay');
         const accEl = document.getElementById('accuracyDisplay'), hitFeedbackEl = document.getElementById('hitFeedback');
         const startScreen = document.getElementById('startScreen');
+        const introScreen = document.getElementById('introScreen');
+        const introText = document.getElementById('introText');
+        const skipIntroBtn = document.getElementById('skipIntroBtn');
         const pauseMenu = document.getElementById('pauseMenu'), resultScreen = document.getElementById('resultScreen');
 
         let audioCtx, masterCompressor, activeAudioNodes = [], audioStartTime = 0, SONG_LENGTH = 34;
@@ -980,27 +1000,52 @@
             update(dt); draw(); requestAnimationFrame(gameLoop);
         }
 
+        let introSkipped = false;
+        let introFinished = false;
+
+        function openStartMenuFromIntro() {
+            if (introFinished) return;
+            introFinished = true;
+            checkGhostTrack();
+            startScreen.style.display = 'flex';
+            introText.style.opacity = '0';
+            introScreen.style.opacity = '0';
+            setTimeout(() => { introScreen.style.display = 'none'; }, 1000);
+        }
+
+        skipIntroBtn.addEventListener('click', () => {
+            introSkipped = true;
+            openStartMenuFromIntro();
+        });
+
         async function playIntro() {
             const showText = (text, duration) => new Promise(resolve => {
+                if (introSkipped || introFinished) { resolve(); return; }
                 introText.style.transition = 'opacity 1s ease-in-out, transform 0s'; introText.style.transform = 'scale(1)';
                 introText.innerText = text; introText.style.opacity = '1';
-                setTimeout(() => { introText.style.opacity = '0'; setTimeout(resolve, 1000); }, duration);
+                setTimeout(() => {
+                    if (introSkipped || introFinished) { resolve(); return; }
+                    introText.style.opacity = '0';
+                    setTimeout(resolve, 1000);
+                }, duration);
             });
             await new Promise(r => setTimeout(r, 500));
+            if (introSkipped || introFinished) return;
             await showText('你知道這是什麼嗎', 2000); await showText('你不知道', 2000); await showText('所以我也沒打算告訴你', 2500);
+            if (introSkipped || introFinished) return;
             await new Promise(r => setTimeout(r, 800));
+            if (introSkipped || introFinished) return;
 
             introText.style.transition = 'opacity 0.5s, transform 4s linear'; introText.style.transform = 'scale(0.8)';
             introText.innerText = '哈'; introText.style.opacity = '1'; setTimeout(() => { introText.style.transform = 'scale(1.5)'; }, 50);
             await new Promise(r => setTimeout(r, 700)); introText.innerText = '哈  哈';
             await new Promise(r => setTimeout(r, 700)); introText.innerText = '哈  哈  哈';
             await new Promise(r => setTimeout(r, 2000));
+            if (introSkipped || introFinished) return;
             introText.style.transition = 'opacity 1s ease-in-out'; introText.style.opacity = '0';
             await new Promise(r => setTimeout(r, 1000));
 
-            checkGhostTrack();
-            startScreen.style.display = 'flex'; introScreen.style.opacity = '0';
-            setTimeout(() => { introScreen.style.display = 'none'; }, 1000);
+            openStartMenuFromIntro();
         }
 
         window.initGame = function(diff) {
