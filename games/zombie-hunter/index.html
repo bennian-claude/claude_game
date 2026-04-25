@@ -100,35 +100,24 @@ const player = { x: 0, y: 0, r: 15 };
 // ═══════════════════════════════════════════════════════
 let zombies = [];
 
-function spawnEdge(z) {
-  const side = Math.floor(Math.random() * 4);
-  const m = 50;
-  if (side === 0) { z.x = -m;   z.y = Math.random() * H; }
-  else if (side === 1) { z.x = W+m;   z.y = Math.random() * H; }
-  else if (side === 2) { z.x = Math.random() * W; z.y = -m; }
-  else               { z.x = Math.random() * W; z.y = H+m; }
+// 在畫面內隨機位置重生，避開玩家
+function respawn(z) {
+  const margin = z.r + 20;
+  do {
+    z.x = margin + Math.random() * (W - margin * 2);
+    z.y = margin + Math.random() * (H - margin * 2);
+  } while (Math.hypot(z.x - player.x, z.y - player.y) < 130);
   z.vx = 0; z.vy = 0;
-  z.safeTime = 2.5; // 2.5s 入場保護：移向畫面中央，不計逃跑
 }
 
-// 開局用：在中心環形區散佈，距中心 110~260px，遠離邊界
-function spawnInside(z) {
-  const cx = W / 2, cy = H / 2;
-  const minR = 110, maxR = Math.min(W, H) * 0.38;
-  const angle = Math.random() * Math.PI * 2;
-  const r = minR + Math.random() * (maxR - minR);
-  z.x = Math.max(z.r + 10, Math.min(W - z.r - 10, cx + Math.cos(angle) * r));
-  z.y = Math.max(z.r + 10, Math.min(H - z.r - 10, cy + Math.sin(angle) * r));
-  z.vx = 0; z.vy = 0;
-  z.safeTime = 0;
-}
-
-function makeZombie(inside = false) {
-  const z = { x: 0, y: 0, vx: 0, vy: 0, r: 17,
+function makeZombie(chaser = false) {
+  const z = { x: 0, y: 0, vx: 0, vy: 0,
+              r: chaser ? 19 : 17,
+              chaser,
               wobble: Math.random() * Math.PI * 2,
               wSpd: 1.2 + Math.random() * 1.5,
-              safeTime: 0 };
-  inside ? spawnInside(z) : spawnEdge(z);
+              invincible: 0 }; // brief invincibility after respawn
+  respawn(z);
   return z;
 }
 
@@ -188,7 +177,11 @@ function startGame() {
   hunterTimer = HUNTER_COOLDOWN;
   player.x = W / 2; player.y = H / 2;
   particles = [];
-  zombies = Array.from({ length: ZOMBIE_COUNT }, () => makeZombie(true));
+  // 3 普通殭屍 + 1 紅色追殺者
+  zombies = [
+    makeZombie(false), makeZombie(false), makeZombie(false),
+    makeZombie(true)   // chaser
+  ];
   state = 'playing';
 }
 
@@ -237,68 +230,62 @@ function update(dt) {
 
 function updateZombie(z, dt) {
   z.wobble += z.wSpd * dt;
+  if (z.invincible > 0) z.invincible -= dt;
 
-  // ── 入場保護期：向畫面中央移動，不計逃跑 ──
-  if (z.safeTime > 0) {
-    z.safeTime -= dt;
-    const tx = W/2, ty = H/2;
-    const ix = tx - z.x, iy = ty - z.y;
-    const id = Math.sqrt(ix*ix + iy*iy) || 1;
-    z.vx = (ix/id) * ZOMBIE_SPEED * 0.7;
-    z.vy = (iy/id) * ZOMBIE_SPEED * 0.7;
-    z.x += z.vx * dt;
-    z.y += z.vy * dt;
-    // 進入畫面後立即解除保護
-    if (z.x > z.r && z.x < W-z.r && z.y > z.r && z.y < H-z.r) z.safeTime = 0;
-    return; // 入場期不做逃跑與扣血
+  if (z.chaser) {
+    // ── 紅色追殺者：追玩家 ──
+    const tx = player.x - z.x, ty = player.y - z.y;
+    const td = Math.sqrt(tx*tx + ty*ty) || 1;
+    const spd = hunterMode ? ZOMBIE_HUNT_SPD : ZOMBIE_SPEED * 1.1;
+    z.vx = (tx/td) * spd;
+    z.vy = (ty/td) * spd;
+  } else {
+    // ── 普通殭屍：逃離玩家 ──
+    const ex = z.x - player.x, ey = z.y - player.y;
+    const ed = Math.sqrt(ex*ex + ey*ey) || 1;
+    const noiseAmt = hunterMode ? 0.3 : 0.85;
+    const nx = Math.cos(z.wobble) * noiseAmt;
+    const ny = Math.sin(z.wobble * 1.4) * noiseAmt;
+    let fx = ex/ed + nx, fy = ey/ed + ny;
+    const fl = Math.sqrt(fx*fx + fy*fy) || 1;
+    const spd = hunterMode ? ZOMBIE_HUNT_SPD : ZOMBIE_SPEED;
+    z.vx = (fx/fl) * spd;
+    z.vy = (fy/fl) * spd;
   }
-
-  // ── 正常逃跑邏輯 ──
-  const ex = z.x - player.x;
-  const ey = z.y - player.y;
-  const ed = Math.sqrt(ex*ex + ey*ey) || 1;
-
-  const noiseAmt = hunterMode ? 0.35 : 0.9;
-  const nx = Math.cos(z.wobble) * noiseAmt;
-  const ny = Math.sin(z.wobble * 1.4) * noiseAmt;
-
-  let fx = ex/ed + nx, fy = ey/ed + ny;
-  const fl = Math.sqrt(fx*fx + fy*fy) || 1;
-  const spd = hunterMode ? ZOMBIE_HUNT_SPD : ZOMBIE_SPEED;
-  z.vx = (fx/fl) * spd;
-  z.vy = (fy/fl) * spd;
 
   z.x += z.vx * dt;
   z.y += z.vy * dt;
 
-  if (hunterMode) {
-    // 獵人模式：反彈牆壁
-    if (z.x < z.r)   { z.x = z.r;   z.vx =  Math.abs(z.vx); }
-    if (z.x > W-z.r) { z.x = W-z.r; z.vx = -Math.abs(z.vx); }
-    if (z.y < z.r)   { z.y = z.r;   z.vy =  Math.abs(z.vy); }
-    if (z.y > H-z.r) { z.y = H-z.r; z.vy = -Math.abs(z.vy); }
-  } else {
-    // 逃出畫面 → 扣一條命
-    if (z.x < -120 || z.x > W+120 || z.y < -120 || z.y > H+120) {
-      lives--;
-      burst(Math.max(4, Math.min(W-4, z.x)), Math.max(4, Math.min(H-4, z.y)), '#ff4444', 10);
-      if (lives <= 0) { state = 'lose'; return; }
-      spawnEdge(z);
-    }
-  }
+  // ── 所有殭屍都彈牆，永不出界 ──
+  if (z.x < z.r)   { z.x = z.r;   z.vx =  Math.abs(z.vx); }
+  if (z.x > W-z.r) { z.x = W-z.r; z.vx = -Math.abs(z.vx); }
+  if (z.y < z.r)   { z.y = z.r;   z.vy =  Math.abs(z.vy); }
+  if (z.y > H-z.r) { z.y = H-z.r; z.vy = -Math.abs(z.vy); }
 
-  // Player touches zombie → kill
-  const cx = player.x - z.x, cy = player.y - z.y;
-  if (Math.sqrt(cx*cx + cy*cy) < player.r + z.r) {
-    kills++;
-    burst(z.x, z.y, hunterMode ? '#ff9900' : '#00ff88', 16);
-    if (kills >= KILL_TARGET) {
-      lastScore = Math.floor(timeLeft * 80) + lives * 500;
-      state = 'win';
-      if (window.onZombieHunterEnd) window.onZombieHunterEnd(lastScore, kills, lives, timeLeft);
-      return;
+  // ── 碰撞判定 ──
+  if (z.invincible > 0) return; // 剛重生的無敵期
+  const cdx = player.x - z.x, cdy = player.y - z.y;
+  if (Math.hypot(cdx, cdy) < player.r + z.r) {
+    if (z.chaser) {
+      // 追殺者碰到玩家 → 扣命
+      lives--;
+      burst(z.x, z.y, '#ff2222', 18);
+      if (lives <= 0) { state = 'lose'; return; }
+      respawn(z);
+      z.invincible = 1.5; // 1.5s 無敵，防止重生後立刻再扣
+    } else {
+      // 普通殭屍被追到 → 擊殺
+      kills++;
+      burst(z.x, z.y, hunterMode ? '#ff9900' : '#00ff88', 16);
+      if (kills >= KILL_TARGET) {
+        lastScore = Math.floor(timeLeft * 80) + lives * 500;
+        state = 'win';
+        if (window.onZombieHunterEnd) window.onZombieHunterEnd(lastScore, kills, lives, timeLeft);
+        return;
+      }
+      respawn(z);
+      z.invincible = 0.5;
     }
-    spawnEdge(z);
   }
 }
 
@@ -353,7 +340,7 @@ function frame(ts) {
 
   // End overlays
   if (state === 'win')  drawEnd('CLEAR! 🎉', '#00ff88', `成功獵殺 ${KILL_TARGET} 隻殭屍！\n得分：${lastScore.toLocaleString()}`);
-  if (state === 'lose') drawEnd('GAME OVER', '#ff4444', lives <= 0 ? '殭屍全逃走了...' : '⏰ 時間到了！');
+  if (state === 'lose') drawEnd('GAME OVER', '#ff4444', lives <= 0 ? '被 💀 追殺者抓住了...' : '⏰ 時間到了！');
 
   requestAnimationFrame(frame);
 }
@@ -381,9 +368,17 @@ function drawPlayer(ts) {
 }
 
 function drawZombie(z, ts) {
-  const col  = hunterMode ? '#ff9900' : '#33dd66';
-  const glow = hunterMode ? '#cc6600' : '#009933';
   const pulse = 0.75 + 0.25 * Math.sin(ts * 0.003 + z.wobble);
+  let col, glow, icon;
+  if (z.chaser) {
+    col  = hunterMode ? '#ff6600' : '#ff2222';
+    glow = hunterMode ? '#aa3300' : '#aa0000';
+    icon = '💀';
+  } else {
+    col  = hunterMode ? '#ff9900' : '#33dd66';
+    glow = hunterMode ? '#cc6600' : '#009933';
+    icon = '🧟';
+  }
   ctx.save();
   ctx.shadowBlur = 16 * pulse; ctx.shadowColor = glow;
   // Glow halo
@@ -398,7 +393,7 @@ function drawZombie(z, ts) {
   ctx.shadowBlur = 0;
   ctx.font = `${z.r * 1.5}px sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('🧟', z.x, z.y + 1);
+  ctx.fillText(icon, z.x, z.y + 1);
   ctx.restore();
 }
 
@@ -437,9 +432,9 @@ function drawHUD(ts) {
   // Bottom hint
   ctx.fillStyle = 'rgba(255,255,255,0.25)';
   ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
-  ctx.fillText('操作：方向鍵移動', pad, H - 18);
+  ctx.fillText(isTouch ? '操作：D-pad 移動' : '操作：方向鍵 / WASD 移動', pad, H - 18);
   ctx.textAlign = 'right';
-  ctx.fillText('平衡調整：獵人模式下殭屍逃跑速度降低，且不會逃離畫面', W - pad, H - 18);
+  ctx.fillText('💀 紅色追殺者碰到你會扣命', W - pad, H - 18);
 }
 
 function drawMenu(ts) {
@@ -464,11 +459,11 @@ function drawMenu(ts) {
   ctx.fillStyle = '#bbb'; ctx.font = '14px sans-serif';
   ctx.textAlign = 'center';
   const lines = [
-    '🧟  殭屍會逃跑！觸碰到牠們來擊殺',
-    '❤️  殭屍逃出畫面外會扣一條命',
-    `🔥  獵人模式 (${HUNTER_DURATION}s)：殭屍減速，不逃離畫面`,
+    '🧟  追上綠色殭屍來擊殺（牠們會逃跑）',
+    '💀  紅色追殺者會追你！碰到會扣一條命',
+    `🔥  獵人模式 (${HUNTER_DURATION}s)：殭屍大幅減速`,
     '',
-    `目標：擊殺 ${KILL_TARGET} 隻殭屍`,
+    `目標：擊殺 ${KILL_TARGET} 隻綠色殭屍`,
   ];
   lines.forEach((l, i) => {
     ctx.fillText(l, W/2, H * 0.44 + i * 26);
