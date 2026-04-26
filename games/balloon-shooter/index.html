@@ -135,7 +135,7 @@
 
 <div id="startScreen" class="overlay">
   <h1>🎈 射氣球大作戰 🎈</h1>
-  <p style="font-size:12px;opacity:0.45;margin-bottom:4px">Release v1.0.1</p>
+  <p style="font-size:12px;opacity:0.45;margin-bottom:4px">Release v1.0.2</p>
   <p>20 秒內射破氣球並收集掉落物拿最高分！</p>
   <div class="rules">
     <span>🎈 氣球 +1</span>
@@ -143,6 +143,7 @@
     <span>💣 炸彈 -10</span>
     <span>⭐ 星星 → 無敵 5 秒</span>
     <span>❄️ 冰晶 → 凍結 5 秒</span>
+    <span>🎯 三叉針 → 一次爆 3 顆</span>
   </div>
   <p style="margin-top:14px;opacity:0.85">無敵模式：分數加倍，炸彈免疫還給 +5！</p>
   <button id="startBtn">開始遊戲</button>
@@ -251,6 +252,7 @@
       notes.forEach((f, i) => playTone({ type: 'square', from: f, to: f, dur: 0.15, vol: 0.22, delay: i * 0.08 }));
     },
     freeze() { [1046.5, 1318.5, 1567.98].forEach((f, i) => playTone({ type: 'sine', from: f, to: f * 0.5, dur: 0.4, vol: 0.2, delay: i * 0.07 })); },
+    multiShot() { [800, 900, 1000].forEach((f, i) => playTone({ type: 'square', from: f, to: f, dur: 0.1, vol: 0.18, delay: i * 0.04 })); },
     gameover() { playTone({ type: 'triangle', from: 300, to: 100, dur: 0.8, vol: 0.3 }); },
     bgmTick(high) {
       const f = high ? 987.77 : 783.99; // B5 / G5
@@ -269,6 +271,7 @@
     particles: [],
     invincibleFrames: 0,
     freezeFrames: 0,
+    multiShotFrames: 0,
     spawnCounter: 0,
     mouse: { x: W / 2, y: H / 2 },
     shakeFrames: 0,
@@ -300,6 +303,7 @@
     else if (type === 'bomb') state.items.push({ ...base, type, r: 24, vy: 0, g: 0.1, vx: (Math.random() - 0.5) * 1.5, spark: 0 });
     else if (type === 'star') state.items.push({ ...base, type, r: 26, vy: -5, g: 0.2, vx: (Math.random() - 0.5) * 2, glow: 0 });
     else if (type === 'freeze') state.items.push({ ...base, type, r: 22, vy: -2, g: 0.12, vx: (Math.random() - 0.5) * 1.5, angle: 0 });
+    else if (type === 'multiShot') state.items.push({ ...base, type, r: 22, vy: -3, g: 0.18, vx: (Math.random() - 0.5) * 2, angle: 0 });
   }
   function maybeDropFromBalloon(x, y) {
     const r = Math.random();
@@ -307,6 +311,7 @@
     else if (r < 0.53) spawnItem('bomb', x, y);
     else if (r < 0.68) spawnItem('star', x, y);
     else if (r < 0.80) spawnItem('freeze', x, y);
+    else if (r < 0.90) spawnItem('multiShot', x, y);
   }
   function spawnParticles(x, y, color) {
     for (let i = 0; i < 15; i++) {
@@ -471,6 +476,29 @@
     ctx.stroke();
     ctx.restore();
   }
+  function drawMultiShot(it) {
+    ctx.save();
+    ctx.translate(it.x, it.y);
+    it.angle += 0.05;
+    ctx.rotate(it.angle);
+    const r = it.r;
+    const g = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r * 1.6);
+    g.addColorStop(0, 'rgba(255,200,50,0.9)');
+    g.addColorStop(1, 'rgba(255,100,0,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.6, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#ff9900'; ctx.lineWidth = 3;
+    ctx.shadowBlur = 8; ctx.shadowColor = '#ffdd00';
+    for (let i = -1; i <= 1; i++) {
+      ctx.save(); ctx.rotate(i * 0.35);
+      ctx.beginPath(); ctx.moveTo(0, r * 0.2); ctx.lineTo(0, -r * 0.9);
+      ctx.moveTo(-r * 0.18, -r * 0.5); ctx.lineTo(0, -r * 0.9); ctx.lineTo(r * 0.18, -r * 0.5);
+      ctx.stroke(); ctx.restore();
+    }
+    ctx.fillStyle = '#ffdd00';
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
   function drawFreeze(it) {
     ctx.save();
     ctx.translate(it.x, it.y);
@@ -546,6 +574,14 @@
         return true;
       }
     }
+    if (state.multiShotFrames > 0) {
+      // pop up to 3 nearest balloons
+      const alive = state.balloons.filter(b => b.alive);
+      alive.sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y));
+      let hit = 0;
+      for (const b of alive) { if (hit >= 3) break; hitBalloon(b); hit++; }
+      return hit > 0;
+    }
     for (let i = state.balloons.length - 1; i >= 0; i--) {
       const b = state.balloons[i];
       if (!b.alive) continue;
@@ -594,6 +630,11 @@
       spawnParticles(it.x, it.y, '#00c8ff');
       spawnParticles(it.x, it.y, '#ffffff');
       sfx.freeze();
+    } else if (it.type === 'multiShot') {
+      state.multiShotFrames = 300;
+      spawnParticles(it.x, it.y, '#ff9900');
+      spawnParticles(it.x, it.y, '#ffdd00');
+      sfx.multiShot();
     }
     updateUI();
   }
@@ -608,6 +649,20 @@
     if (state.spawnCounter >= spawnEvery) {
       spawnBalloon();
       state.spawnCounter = 0;
+    }
+
+    // multi-shot countdown
+    if (state.multiShotFrames > 0) {
+      state.multiShotFrames--;
+      const bar = document.getElementById('freezeBar');
+      if (state.freezeFrames <= 0) {
+        bar.style.display = 'block';
+        bar.style.background = 'linear-gradient(90deg,#ff9900,#ffdd00)';
+        bar.style.opacity = (state.frame % 20 < 10) ? '1' : '0.7';
+        bar.textContent = `🎯 三叉針 ${Math.ceil(state.multiShotFrames / 60)}s`;
+      }
+    } else if (state.freezeFrames <= 0) {
+      document.getElementById('freezeBar').style.display = 'none';
     }
 
     // freeze countdown
@@ -685,6 +740,7 @@
       else if (it.type === 'bomb') drawBomb(it);
       else if (it.type === 'star') drawStar(it);
       else if (it.type === 'freeze') drawFreeze(it);
+      else if (it.type === 'multiShot') drawMultiShot(it);
     }
     drawParticles();
     drawCursor();
@@ -727,6 +783,7 @@
     state.particles = [];
     state.invincibleFrames = 0;
     state.freezeFrames = 0;
+    state.multiShotFrames = 0;
     state.spawnCounter = 0;
     state.shakeFrames = 0;
     state.running = true;

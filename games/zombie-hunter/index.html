@@ -111,6 +111,7 @@ const PLAYER_SPEED     = 220;
 const ZOMBIE_SPEED     = 75;
 const ZOMBIE_HUNT_SPD  = 35;
 const FAST_ZOMBIE_SPD  = 155;
+const GIANT_ZOMBIE_SPD = 42;
 
 // ═══════════════════════════════════════════════════════
 //  STATE
@@ -120,6 +121,7 @@ let kills, lives, timeLeft;
 let hunterMode, hunterTimer;
 let lastScore = 0;
 let lightningFlashes = [];
+let bloodDrops = [];
 
 // ═══════════════════════════════════════════════════════
 //  PLAYER
@@ -141,10 +143,11 @@ function respawn(z) {
   z.vx = 0; z.vy = 0;
 }
 
-function makeZombie(chaser = false, fast = false) {
+function makeZombie(chaser = false, fast = false, giant = false) {
   const z = { x: 0, y: 0, vx: 0, vy: 0,
-              r: chaser ? 19 : (fast ? 12 : 17),
-              chaser, fast,
+              r: chaser ? 19 : (fast ? 12 : (giant ? 32 : 17)),
+              chaser, fast, giant,
+              hp: giant ? 3 : 1,
               wobble: Math.random() * Math.PI * 2,
               wSpd: fast ? 3.5 : (1.2 + Math.random() * 1.5),
               invincible: 0 };
@@ -211,11 +214,12 @@ function startGame() {
   hunterTimer = HUNTER_COOLDOWN;
   player.x = W / 2; player.y = H / 2;
   particles = [];
-  // 2 普通殭屍 + 1 快速殭屍 + 1 紅色追殺者
+  // 1 普通 + 1 快速 + 1 巨型 + 1 追殺者
   zombies = [
-    makeZombie(false), makeZombie(false),
-    makeZombie(false, true), // fast
-    makeZombie(true)         // chaser
+    makeZombie(false),
+    makeZombie(false, true),        // fast
+    makeZombie(false, false, true), // giant
+    makeZombie(true)                // chaser
   ];
   state = 'playing';
 }
@@ -281,6 +285,16 @@ function updateZombie(z, dt) {
     const spd = hunterMode ? ZOMBIE_HUNT_SPD * 0.6 : FAST_ZOMBIE_SPD;
     z.vx = (ex/ed) * spd;
     z.vy = (ey/ed) * spd;
+  } else if (z.giant) {
+    // ── 巨型殭屍：緩慢逃離，需擊中 3 次才死 ──
+    const ex = z.x - player.x, ey = z.y - player.y;
+    const ed = Math.sqrt(ex*ex + ey*ey) || 1;
+    const noiseAmt = 0.4;
+    const nx = Math.cos(z.wobble) * noiseAmt, ny = Math.sin(z.wobble * 1.2) * noiseAmt;
+    let fx = ex/ed + nx, fy = ey/ed + ny;
+    const fl = Math.sqrt(fx*fx + fy*fy) || 1;
+    const spd = hunterMode ? ZOMBIE_HUNT_SPD * 0.5 : GIANT_ZOMBIE_SPD;
+    z.vx = (fx/fl) * spd; z.vy = (fy/fl) * spd;
   } else {
     // ── 普通殭屍：逃離玩家 ──
     const ex = z.x - player.x, ey = z.y - player.y;
@@ -315,6 +329,20 @@ function updateZombie(z, dt) {
       if (lives <= 0) { state = 'lose'; return; }
       respawn(z);
       z.invincible = 1.5; // 1.5s 無敵，防止重生後立刻再扣
+    } else if (z.giant) {
+      z.hp--;
+      burst(z.x, z.y, '#ff8800', 10);
+      if (z.hp <= 0) {
+        kills += 3;
+        burst(z.x, z.y, '#ffaa00', 28);
+        if (kills >= KILL_TARGET) {
+          lastScore = Math.floor(timeLeft * 80) + lives * 500;
+          state = 'win';
+          if (window.onZombieHunterEnd) window.onZombieHunterEnd(lastScore, kills, lives, timeLeft);
+          return;
+        }
+        respawn(z); z.hp = 3; z.invincible = 1.5;
+      } else { z.invincible = 0.8; }
     } else {
       // 普通殭屍被追到 → 擊殺
       kills++;
@@ -420,6 +448,10 @@ function drawZombie(z, ts) {
     col  = hunterMode ? '#ffdd00' : '#cc88ff';
     glow = hunterMode ? '#aa8800' : '#8800cc';
     icon = '⚡';
+  } else if (z.giant) {
+    col  = hunterMode ? '#ff6600' : '#ff8800';
+    glow = hunterMode ? '#cc3300' : '#cc5500';
+    icon = z.hp === 3 ? '👾' : (z.hp === 2 ? '😤' : '😵');
   } else {
     col  = hunterMode ? '#ff9900' : '#33dd66';
     glow = hunterMode ? '#cc6600' : '#009933';
@@ -524,12 +556,26 @@ function drawMenu(ts) {
   ctx.fillStyle = 'rgba(255,255,255,0.2)';
   ctx.font = '11px Orbitron, sans-serif';
   ctx.textAlign = 'right';
-  ctx.fillText('Release v1.0.1', W - 8, H - 8);
+  ctx.fillText('Release v1.0.2', W - 8, H - 8);
 
-  // ── 新增怪物說明 ──
+  // ── 怪物說明 ──
   ctx.fillStyle = 'rgba(200,136,255,0.7)';
   ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('⚡ 紫色閃電殭屍：速度極快，難以追上！', W/2, H * 0.88);
+  ctx.fillText('⚡ 紫色閃電殭屍：速度極快  👾 橘色巨型殭屍：需擊中 3 次 (+3 分)', W/2, H * 0.88);
+
+  // ── 血滴特效 ──
+  if (Math.random() < 0.06) {
+    bloodDrops.push({ x: Math.random() * W, y: 0, vy: 60 + Math.random() * 80, r: 3 + Math.random() * 4, life: 1.0 });
+  }
+  for (let i = bloodDrops.length - 1; i >= 0; i--) {
+    const d = bloodDrops[i];
+    d.y += d.vy * 0.016; d.vy += 120 * 0.016; d.life -= 0.012;
+    if (d.life <= 0 || d.y > H) { bloodDrops.splice(i, 1); continue; }
+    ctx.save(); ctx.globalAlpha = d.life * 0.7;
+    ctx.fillStyle = '#cc0000'; ctx.shadowBlur = 4; ctx.shadowColor = '#ff0000';
+    ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
 
   // ── 閃電特效 ──
   if (Math.random() < 0.015) {
