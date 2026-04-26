@@ -335,9 +335,10 @@
             <button class="song-btn selected" onclick="selectSong('ELISE', this)">給愛麗絲 (Synthwave)</button>
             <button class="song-btn" onclick="selectSong('TWINKLE', this)">小星星 ⭐</button>
             <button class="song-btn" onclick="selectSong('BIRTHDAY', this)">生日快樂 🎂</button>
+            <button class="song-btn" onclick="selectSong('JINGLE', this)">鈴兒響叮噹 🎄</button>
             <button class="song-btn" onclick="selectSong('RANDOM', this)">隨機生成</button>
         </div>
-        <p style="font-size:11px;opacity:0.3;margin-top:-20px">Release v1.0.2</p>
+        <p style="font-size:11px;opacity:0.3;margin-top:-20px">Release v1.0.3</p>
         <div class="diff-container">
             <button class="btn btn-easy" onclick="initGame('EASY')">EASY</button>
             <button class="btn btn-normal" onclick="initGame('NORMAL')">NORMAL</button>
@@ -643,6 +644,7 @@
             if (currentSong === 'ELISE') { SONG_LENGTH = 34; generateElise(); }
             else if (currentSong === 'TWINKLE') { SONG_LENGTH = 24; generateTwinkle(); }
             else if (currentSong === 'BIRTHDAY') { SONG_LENGTH = 20; generateBirthday(); }
+            else if (currentSong === 'JINGLE') { SONG_LENGTH = 28; generateJingleBells(); }
             else if (currentSong === 'RANDOM') { SONG_LENGTH = 32; generateRandomTrack(); }
             else if (currentSong === '404') { SONG_LENGTH = 20; generateTrack404(); }
             setDifficulty(currentDifficulty); totalNotes = notes.length;
@@ -697,6 +699,45 @@
             });
             if (currentDifficulty !== 'EASY') {
                 [0,8,16,24].forEach(beat => scheduleBassNote(s + beat * b + audioStartTime, 130.81, b * 6));
+            }
+        }
+
+        function generateJingleBells() {
+            const s = 2.0, b = 0.4;
+            // C4=261.63 D4=293.66 E4=329.63 F4=349.23 G4=392.00
+            // lanes: C→0, D→0, E→1, F→2, G→3
+            const melody = [
+                // "Jingle bells, jingle bells, jingle all the way"
+                [0,1,329.63],[1,1,329.63],[2,1,329.63],
+                [4,1,329.63],[5,1,329.63],[6,1,329.63],
+                [8,1,329.63],[9,3,392.00],[10,0,261.63],[11,0,293.66],[12,1,329.63],
+                // "Oh what fun it is to ride in a one-horse open sleigh"
+                [14,2,349.23],[15,2,349.23],[16,2,349.23],[17,2,349.23],
+                [18,1,329.63],[19,1,329.63],
+                [20,0,293.66],[21,0,293.66],[22,1,329.63],[23,0,293.66],
+                [25,3,392.00],
+                // Repeat chorus
+                [28,1,329.63],[29,1,329.63],[30,1,329.63],
+                [32,1,329.63],[33,1,329.63],[34,1,329.63],
+                [36,1,329.63],[37,3,392.00],[38,0,261.63],[39,0,293.66],[40,1,329.63],
+                // "Oh what fun..." finale
+                [42,2,349.23],[43,2,349.23],[44,2,349.23],[45,2,349.23],
+                [46,1,329.63],[47,1,329.63],
+                [48,0,293.66],[49,0,293.66],[50,3,392.00],[51,3,392.00],
+                [52,0,261.63]
+            ];
+            melody.forEach(([beat, lane, freq]) => {
+                const t = s + beat * b;
+                notes.push(new Note(t, lane, 'tap', 0));
+                scheduleMelodyNote(t + audioStartTime, freq, 0.32, 0.22);
+            });
+            if (currentDifficulty !== 'EASY') {
+                [0,8,16,24,32,40,48].forEach(beat => scheduleBassNote(s + beat * b + audioStartTime, 130.81, b * 7));
+            }
+            if (currentDifficulty === 'HARD') {
+                for (let beat = 0; beat < 54; beat += 2) {
+                    scheduleKick(s + beat * b + audioStartTime);
+                }
             }
         }
 
