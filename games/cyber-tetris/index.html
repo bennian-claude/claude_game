@@ -149,9 +149,9 @@
         lasers.forEach((laser, index) => {
             laser.life -= 0.05;
             if(laser.life <= 0) { lasers.splice(index, 1); return; }
-            context.fillStyle = rgba(0, 243, 255, ${laser.life});
+            context.fillStyle = `rgba(0, 243, 255, ${laser.life})`;
             context.fillRect(0, laser.y + 0.5 - laser.life/2, 12, laser.life);
-            context.fillStyle = rgba(255, 255, 255, ${laser.life});
+            context.fillStyle = `rgba(255, 255, 255, ${laser.life})`;
             context.fillRect(0, laser.y + 0.4, 12, 0.2);
         });
 
@@ -378,7 +378,7 @@
 
         if (collide(arena, player)) {
             gameState = 'GAMEOVER';
-            showOverlay('SYSTEM FAILURE', 最終分數: ${player.score});
+            showOverlay('SYSTEM FAILURE', `最終分數: ${player.score}`);
         }
     }
 
