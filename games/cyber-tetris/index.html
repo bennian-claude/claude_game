@@ -1,4 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>俄羅斯方塊 - 賽博終極版</title>
+    <style>
+        body {
+            background: radial-gradient(circle at center, #0b1021 0%, #000000 100%);
+            color: #00f3ff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            text-transform: uppercase;
+        }
 
+        #game-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            transition: transform 0.1s ease-out;
+        }
+
+        .shake-intense {
+            animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 2px, 0) rotate(-1deg); }
+            20%, 80% { transform: translate3d(4px, -3px, 0) rotate(1deg); }
+            30%, 50%, 70% { transform: translate3d(-6px, 4px, 0) rotate(-2deg); }
+            40%, 60% { transform: translate3d(6px, -4px, 0) rotate(2deg); }
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 2.2rem;
+            color: #fff;
+            text-shadow: 0 0 5px #00f3ff, 0 0 15px #00f3ff, 0 0 30px #0055ff;
+            letter-spacing: 4px;
+            font-weight: 900;
+        }
+
+        #game-container {
+            display: flex;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.6) 0%, rgba(2, 6, 23, 0.8) 100%);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8), inset 0 0 20px rgba(0, 243, 255, 0.05);
+            backdrop-filter: blur(10px);
+            gap: 20px;
+            transition: box-shadow 0.3s ease;
+        }
+
+        #canvas-wrapper {
+            position: relative;
+            display: flex;
+        }
+
+        .danger-vignette {
+            box-shadow: 0 0 50px rgba(255, 0, 60, 0.6), inset 0 0 40px rgba(255, 0, 60, 0.4) !important;
+            border-color: rgba(255, 0, 60, 0.8) !important;
+            animation: pulse-danger 1s infinite alternate;
+        }
+        @keyframes pulse-danger {
+            0% { box-shadow: 0 0 30px rgba(255, 0, 60, 0.4), inset 0 0 20px rgba(255, 0, 60, 0.2); }
+            100% { box-shadow: 0 0 60px rgba(255, 0, 60, 0.8), inset 0 0 50px rgba(255, 0, 60, 0.5); }
+        }
+
+        #tetris {
+            background-color: rgba(0, 5, 15, 0.95);
+            border: 2px solid #00f3ff;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.3), inset 0 0 40px rgba(0, 243, 255, 0.1);
+        }
+
+        #sidebar {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 130px;
+        }
+
+        .info-box {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 12px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 85, 255, 0.5);
+            box-shadow: inset 0 0 15px rgba(0, 85, 255, 0.2);
+            text-align: center;
+            margin-bottom: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .info-box::after {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: linear-gradient(to bottom, transparent, rgba(0, 243, 255, 0.1), transparent);
+            transform: rotate(45deg);
+            animation: scanline 4s linear infinite;
+        }
+        @keyframes scanline {
+            0% { transform: translateY(-100%) rotate(45deg); }
+            100% { transform: translateY(100%) rotate(45deg); }
+        }
+
+        .info-box span {
+            display: block;
+            font-size: 0.75rem;
+            color: #8ab4f8;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+
+        .info-box strong {
+            display: block;
+            font-size: 1.6rem;
+            color: #fff;
+            text-shadow: 0 0 10px #00f3ff;
+        }
+
+        #next-piece-canvas {
+            background-color: transparent;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto;
+        }
+
+        .btn {
+            background: linear-gradient(180deg, rgba(0, 243, 255, 0.1) 0%, rgba(0, 85, 255, 0.2) 100%);
+            color: #fff;
+            border: 1px solid #00f3ff;
+            padding: 12px 15px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            margin-top: 10px;
+            width: 100%;
+            letter-spacing: 2px;
+            text-shadow: 0 0 5px #00f3ff;
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+        }
+
+        .btn:hover {
+            background: #00f3ff;
+            color: #000;
+            box-shadow: 0 0 25px #00f3ff, 0 0 50px rgba(0, 243, 255, 0.5);
+            text-shadow: none;
+            transform: translateY(-2px);
+        }
+
+        .btn-restart {
+            background: rgba(255, 0, 60, 0.1);
+            border-color: #ff003c;
+            color: #ffaa00;
+            text-shadow: 0 0 5px #ff003c;
+            font-size: 0.85rem;
+            padding: 8px 10px;
+        }
+        .btn-restart:hover {
+            background: #ff003c;
+            color: #fff;
+            box-shadow: 0 0 20px #ff003c;
+        }
+
+        #controls {
+            display: none;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(2, 60px);
+            gap: 12px;
+            justify-content: center;
+            margin-top: 5px;
+        }
+
+        .control-btn {
+            background: rgba(0, 243, 255, 0.05);
+            color: #00f3ff;
+            border: 1px solid rgba(0, 243, 255, 0.5);
+            border-radius: 50%;
+            font-size: 1.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: inset 0 0 10px rgba(0, 243, 255, 0.1);
+        }
+
+        .control-btn:active {
+            background: #00f3ff;
+            color: #000;
+            box-shadow: 0 0 20px #00f3ff;
+        }
+
+        #btn-up { grid-column: 2; grid-row: 1; }
+        #btn-left { grid-column: 1; grid-row: 2; }
+        #btn-down { grid-column: 2; grid-row: 2; }
+        #btn-right { grid-column: 3; grid-row: 2; }
+
+        @media (max-width: 600px) {
+            #game-container {
+                flex-direction: column;
                 align-items: center;
                 padding: 10px;
             }
@@ -9,12 +219,12 @@
                 gap: 10px;
             }
             .info-box { margin-bottom: 0; flex: 1; padding: 5px; }
-            #next-piece-canvas { display: none; } /* 手機隱藏預覽省空間 */
+            #next-piece-canvas { display: none; }
             .info-box:first-child { display: none; }
             #controls { display: grid; }
             #tetris { width: 288px; height: 480px; }
         }
-       
+
         #overlay-screen {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -27,7 +237,7 @@
             backdrop-filter: blur(8px);
             z-index: 10;
         }
-       
+
         #overlay-title {
             color: #fff;
             font-size: 3rem;
@@ -43,14 +253,11 @@
 
 <div id="game-wrapper">
     <h1>CYBER TETRIS</h1>
-   
+
     <div id="game-container">
-        <!-- 將畫布與疊加層包裝在一起，避免擋住右邊按鈕 -->
         <div id="canvas-wrapper">
-            <!-- 主要遊戲畫布 (12 x 20) -->
             <canvas id="tetris" width="360" height="600"></canvas>
-           
-            <!-- 狀態疊加層 (暫停 / 結束) -->
+
             <div id="overlay-screen">
                 <h2 id="overlay-title">系統待機</h2>
                 <p id="overlay-desc" style="color: #8ab4f8; margin-bottom: 20px;">等待使用者輸入...</p>
@@ -58,7 +265,6 @@
             </div>
         </div>
 
-        <!-- 側邊欄 -->
         <div id="sidebar">
             <div>
                 <div class="info-box">
@@ -81,7 +287,6 @@
         </div>
     </div>
 
-    <!-- 手機虛擬按鍵 -->
     <div id="controls">
         <button id="btn-up" class="control-btn">↻</button>
         <button id="btn-left" class="control-btn">←</button>
@@ -96,27 +301,24 @@
     const nextCanvas = document.getElementById('next-piece-canvas');
     const nextContext = nextCanvas.getContext('2d');
 
-    // 遊戲參數設定 (30px = 1格)
     context.scale(30, 30);
     nextContext.scale(25, 25);
 
-    // --- 高科技絕美配色 (移除舊螢光綠) ---
     const colors = [
         null,
-        '#00f3ff', // 1: T (賽博青)
-        '#ff003c', // 2: O (駭客紅)
-        '#e6ff00', // 3: L (酸性黃)
-        '#0055ff', // 4: J (深邃藍)
-        '#b700ff', // 5: I (霓虹紫)
-        '#00ffa3', // 6: S (薄荷青)
-        '#ff7000', // 7: Z (琥珀橘)
-        '#ff0000', // 8: 炸彈方塊 (危險閃紅)
-        '#ffffff', // 9: 奈米蟲 (純白發光)
-        '#444444', // 10: 高密度暗物質 (外殼)
-        '#ff00ff'  // 11: 量子疊加態 (幻影紫)
+        '#00f3ff',
+        '#ff003c',
+        '#e6ff00',
+        '#0055ff',
+        '#b700ff',
+        '#00ffa3',
+        '#ff7000',
+        '#ff0000',
+        '#ffffff',
+        '#444444',
+        '#ff00ff'
     ];
 
-    // 經典方塊形狀
     const standardPieces = {
         'T': [[0,0,0], [1,1,1], [0,1,0]],
         'O': [[2,2], [2,2]],
@@ -127,11 +329,9 @@
         'Z': [[7,7,0], [0,7,7], [0,0,0]]
     };
 
-    // --- 特效系統 ---
     let particles = [];
     let lasers = [];
-   
-    // 建立粒子特效 (特效 2: 數據崩解)
+
     function createParticles(x, y, colorStr, amount = 10) {
         for(let i=0; i<amount; i++) {
             particles.push({
@@ -145,7 +345,6 @@
     }
 
     function updateAndDrawEffects() {
-        // 畫雷射 (特效 7)
         lasers.forEach((laser, index) => {
             laser.life -= 0.05;
             if(laser.life <= 0) { lasers.splice(index, 1); return; }
@@ -155,11 +354,10 @@
             context.fillRect(0, laser.y + 0.4, 12, 0.2);
         });
 
-        // 畫粒子
         particles.forEach((p, index) => {
             p.x += p.vx;
             p.y += p.vy;
-            p.vy += 0.02; // 重力
+            p.vy += 0.02;
             p.life -= 0.03;
             if(p.life <= 0) { particles.splice(index, 1); return; }
             context.fillStyle = p.color;
@@ -169,41 +367,36 @@
         });
     }
 
-    // --- 繪製高科技方塊 (Aesthetics Update) ---
     function drawBlock(x, y, value, ctx, isGhost = false) {
         if (value === 0) return;
-       
+
         let color = colors[value];
-        // 如果是量子方塊，顏色讓他隨機閃爍
         if (value === 11) color = colors[Math.floor(Math.random() * 7) + 1];
 
         const alpha = isGhost ? 0.2 : 1.0;
         ctx.globalAlpha = alpha;
 
-        // 玻璃感底框
         ctx.fillStyle = 'rgba(0, 10, 25, 0.8)';
         ctx.fillRect(x + 0.05, y + 0.05, 0.9, 0.9);
 
-        // 發光邊緣
         ctx.strokeStyle = color;
         ctx.lineWidth = 0.08;
         ctx.strokeRect(x + 0.1, y + 0.1, 0.8, 0.8);
 
-        // 內部科技紋理
-        if (value === 8) { // 炸彈: 閃爍紅心
+        if (value === 8) {
             ctx.fillStyle = Math.random() > 0.5 ? '#ff003c' : '#ffffff';
             ctx.fillRect(x + 0.3, y + 0.3, 0.4, 0.4);
-        } else if (value === 9) { // 奈米蟲: 小巧晶片
+        } else if (value === 9) {
             ctx.fillStyle = '#fff';
             ctx.fillRect(x + 0.35, y + 0.35, 0.3, 0.3);
             ctx.strokeStyle = '#00f3ff';
             ctx.strokeRect(x + 0.25, y + 0.25, 0.5, 0.5);
-        } else if (value === 10) { // 暗物質: 沉重感與紫色核心
+        } else if (value === 10) {
             ctx.fillStyle = '#222';
             ctx.fillRect(x + 0.15, y + 0.15, 0.7, 0.7);
             ctx.fillStyle = '#b700ff';
             ctx.fillRect(x + 0.35, y + 0.35, 0.3, 0.3);
-        } else { // 一般方塊: 半透明發光內核
+        } else {
             ctx.fillStyle = color;
             ctx.globalAlpha = isGhost ? 0.1 : 0.4;
             ctx.fillRect(x + 0.2, y + 0.2, 0.6, 0.6);
@@ -221,22 +414,17 @@
         });
     }
 
-    // 建立 12x20 版面
     const arena = [];
     while (arena.length < 20) arena.push(new Array(12).fill(0));
 
-    // --- 特殊方塊生成系統 ---
     function generatePiece() {
-        // 將特殊方塊機率從 0.2 (20%) 降低到 0.1 (10%)
         if (Math.random() < 0.1) {
             const rand = Math.random();
-            if (rand < 0.25) return { matrix: [[8]], type: 'bomb' }; // 特殊1: 炸彈 (1x1)
-            if (rand < 0.50) return { matrix: [[9]], type: 'nano' }; // 特殊2: 奈米蟲 (1x1)
-            if (rand < 0.75) return { matrix: [[10,10],[10,10]], type: 'heavy' }; // 特殊3: 暗物質 (2x2)
-           
-            // 特殊5: 量子方塊 (借用普通形狀，但賦予量子屬性)
+            if (rand < 0.25) return { matrix: [[8]], type: 'bomb' };
+            if (rand < 0.50) return { matrix: [[9]], type: 'nano' };
+            if (rand < 0.75) return { matrix: [[10,10],[10,10]], type: 'heavy' };
+
             let normal = generateNormalMatrix();
-            // 把數字都換成 11 代表量子
             let quantumMatrix = normal.map(row => row.map(v => v !== 0 ? 11 : 0));
             return { matrix: quantumMatrix, type: 'quantum' };
         }
@@ -255,10 +443,9 @@
         nextObj: null,
         specialType: 'normal',
         score: 0, lines: 0, level: 1,
-        trail: [] // 特效4: 殘影
+        trail: []
     };
 
-    // 碰撞偵測
     function collide(board, p) {
         const m = p.matrix;
         const o = p.pos;
@@ -275,11 +462,10 @@
     function triggerScreenShake() {
         const wrapper = document.getElementById('game-wrapper');
         wrapper.classList.remove('shake-intense');
-        void wrapper.offsetWidth; // trigger reflow
+        void wrapper.offsetWidth;
         wrapper.classList.add('shake-intense');
     }
 
-    // 將方塊寫入版面
     function merge(board, p) {
         let isBomb = false;
         p.matrix.forEach((row, y) => {
@@ -287,17 +473,15 @@
                 if (value !== 0) {
                     let by = y + p.pos.y;
                     let bx = x + p.pos.x;
-                    // 加入邊界保護，防止超出版面導致 TypeError 當機
                     if (by >= 0 && by < 20 && bx >= 0 && bx < 12) {
                         board[by][bx] = value;
-                        if (value === 8) isBomb = true; // 引爆炸彈
-                        if (value === 11) board[by][bx] = Math.floor(Math.random() * 7) + 1; // 量子鎖定為隨機顏色
+                        if (value === 8) isBomb = true;
+                        if (value === 11) board[by][bx] = Math.floor(Math.random() * 7) + 1;
                     }
                 }
             });
         });
 
-        // 炸彈方塊效果 (清除 5x5 範圍)
         if (isBomb) {
             triggerScreenShake();
             const cx = p.pos.x;
@@ -326,17 +510,15 @@
         else matrix.reverse();
     }
 
-    // 消除與計分
     function arenaSweep() {
         let rowCount = 1;
         let linesCleared = 0;
-       
+
         outer: for (let y = arena.length - 1; y >= 0; --y) {
             for (let x = 0; x < arena[y].length; ++x) {
                 if (arena[y][x] === 0) continue outer;
             }
 
-            // 觸發粒子崩解特效
             for (let x = 0; x < arena[y].length; ++x) {
                 createParticles(x, y, colors[arena[y][x]], 8);
             }
@@ -349,15 +531,14 @@
             rowCount *= 2;
             linesCleared++;
         }
-       
+
         if (linesCleared > 0) {
             player.lines += linesCleared;
             player.level = Math.floor(player.lines / 5) + 1;
             updateScore();
-           
-            // 特效 7: 雷射切割 (一次消 4 行以上)
+
             if (linesCleared >= 4) {
-                lasers.push({y: 19, life: 1.0}); // 簡單示意在底部發射
+                lasers.push({y: 19, life: 1.0});
                 triggerScreenShake();
             }
         }
@@ -365,15 +546,15 @@
 
     function playerReset() {
         if (!player.nextObj) player.nextObj = generatePiece();
-       
+
         player.matrix = player.nextObj.matrix;
         player.specialType = player.nextObj.type;
         player.nextObj = generatePiece();
-       
+
         player.pos.y = 0;
         player.pos.x = (Math.floor(arena[0].length / 2)) - (Math.floor(player.matrix[0].length / 2));
         player.trail = [];
-       
+
         drawNextPiece();
 
         if (collide(arena, player)) {
@@ -382,7 +563,6 @@
         }
     }
 
-    // 取得幽靈方塊 (全息投影) 的落點
     function getGhostPos() {
         const ghost = { matrix: player.matrix, pos: { x: player.pos.x, y: player.pos.y } };
         while (!collide(arena, ghost)) { ghost.pos.y++; }
@@ -392,29 +572,25 @@
 
     function playerDrop() {
         player.pos.y++;
-        // 紀錄殘影
         player.trail.push({x: player.pos.x, y: player.pos.y, alpha: 0.3});
         if(player.trail.length > 4) player.trail.shift();
 
         if (collide(arena, player)) {
-            // 準確計算方塊的實際高度，避免帶有空列的方塊誤判碰到底部
             let actualHeight = 0;
             for (let y = 0; y < player.matrix.length; y++) {
                 if (player.matrix[y].some(v => v !== 0)) actualHeight = y + 1;
             }
             let hitFloor = (player.pos.y + actualHeight > arena.length);
-           
+
             if (player.specialType === 'heavy' && !hitFloor) {
-                // 暗物質方塊效果 (粉碎下方障礙物，直到碰到底)
                 player.matrix.forEach((row, y) => {
                     row.forEach((value, x) => {
                         if (value !== 0) {
                             let by = y + player.pos.y;
                             let bx = x + player.pos.x;
-                            // 加入邊界保護
                             if (by >= 0 && by < 20 && bx >= 0 && bx < 12 && arena[by][bx] !== 0) {
                                 createParticles(bx, by, '#444', 5);
-                                arena[by][bx] = 0; // 直接粉碎
+                                arena[by][bx] = 0;
                                 player.score += 20;
                             }
                         }
@@ -424,30 +600,27 @@
             } else {
                 player.pos.y--;
                 merge(arena, player);
-                arenaSweep(); // 修正：先消除行數再重置方塊，避免誤判滿版
+                arenaSweep();
                 playerReset();
             }
         }
         dropCounter = 0;
     }
-   
+
     function playerHardDrop() {
         while (!collide(arena, player)) { player.pos.y++; }
-       
+
         if (player.specialType !== 'heavy') {
             player.pos.y--;
         } else {
-            // 退回撞擊前一格 (修復暗物質方塊沉底時的計算越界)
             player.pos.y--;
-           
-            // 暗物質強制貫穿到底部
+
             let actualHeight = 0;
             for (let y = 0; y < player.matrix.length; y++) {
                 if (player.matrix[y].some(v => v !== 0)) actualHeight = y + 1;
             }
             while(player.pos.y < 20 - actualHeight) {
                  player.pos.y++;
-                 // 粉碎沿途
                  player.matrix.forEach((row, y) => {
                     row.forEach((value, x) => {
                         let by = y + player.pos.y;
@@ -460,10 +633,10 @@
                  });
             }
         }
-       
+
         merge(arena, player);
         triggerScreenShake();
-        arenaSweep(); // 修正：先消除行數再重置方塊
+        arenaSweep();
         playerReset();
         dropCounter = 0;
     }
@@ -474,9 +647,8 @@
     }
 
     function playerRotate(dir) {
-        // 奈米蟲或炸彈不用轉
         if(player.matrix.length === 1) return;
-       
+
         const pos = player.pos.x;
         let offset = 1;
         rotate(player.matrix, dir);
@@ -492,10 +664,9 @@
     }
 
     function draw() {
-        // 清空並畫背景網格
         context.fillStyle = '#00040a';
         context.fillRect(0, 0, canvas.width, canvas.height);
-       
+
         context.fillStyle = 'rgba(0, 243, 255, 0.03)';
         for(let i=0; i<12; i++) {
             for(let j=0; j<20; j++) {
@@ -506,11 +677,9 @@
         drawMatrix(arena, {x: 0, y: 0}, context);
 
         if (player.matrix && gameState === 'PLAYING') {
-            // 畫幽靈方塊 (特效 3/4)
             const ghostPos = getGhostPos();
             drawMatrix(player.matrix, ghostPos, context, true);
-           
-            // 畫殘影
+
             player.trail.forEach(t => {
                 t.alpha -= 0.05;
                 if(t.alpha > 0) {
@@ -522,10 +691,10 @@
 
             drawMatrix(player.matrix, player.pos, context);
         }
-       
+
         updateAndDrawEffects();
     }
-   
+
     function drawNextPiece() {
         nextContext.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
         if (player.nextObj) {
@@ -541,43 +710,38 @@
         document.getElementById('level').innerText = player.level;
     }
 
-    // 遊戲狀態機
     let dropCounter = 0;
     let quantumTimer = 0;
     let lastTime = 0;
-    let gameState = 'START'; // START, PLAYING, PAUSED, GAMEOVER
+    let gameState = 'START';
     let reqId;
 
     function update(time = 0) {
         if (gameState !== 'PLAYING') return;
-       
+
         const deltaTime = time - lastTime;
         lastTime = time;
 
-        // 特效 9: 危機紅光
         const isDanger = arena[0].some(x=>x) || arena[1].some(x=>x) || arena[2].some(x=>x);
         const container = document.getElementById('game-container');
         if (isDanger) container.classList.add('danger-vignette');
         else container.classList.remove('danger-vignette');
 
-        // 特效 10: 子彈時間 (快到頂端時減速給玩家反應)
         let currentDropInterval = Math.max(100, 1000 - (player.level - 1) * 100);
-        if (isDanger && player.pos.y < 4) currentDropInterval *= 1.5; // 放慢 1.5 倍
+        if (isDanger && player.pos.y < 4) currentDropInterval *= 1.5;
 
         dropCounter += deltaTime;
         if (dropCounter > currentDropInterval) {
             playerDrop();
         }
 
-        // 特殊 5: 量子方塊變化
         if (player.specialType === 'quantum') {
             quantumTimer += deltaTime;
-            if (quantumTimer > 300) { // 每 0.3 秒變換形狀
+            if (quantumTimer > 300) {
                 quantumTimer = 0;
                 let newMatrix = generateNormalMatrix().map(row => row.map(v => v !== 0 ? 11 : 0));
                 let oldMatrix = player.matrix;
                 player.matrix = newMatrix;
-                // 如果變形會卡住，就變回來
                 if (collide(arena, player)) player.matrix = oldMatrix;
             }
         }
@@ -590,8 +754,7 @@
         const overlay = document.getElementById('overlay-screen');
         document.getElementById('overlay-title').innerText = title;
         document.getElementById('overlay-desc').innerText = desc;
-       
-        // 依照遊戲狀態切換按鈕文字
+
         const overlayBtn = document.getElementById('overlay-btn');
         if (gameState === 'GAMEOVER') {
             overlayBtn.innerText = '重新啟動 RESTART';
@@ -600,7 +763,7 @@
         } else {
             overlayBtn.innerText = '啟動 START';
         }
-       
+
         overlay.classList.remove('hidden');
     }
 
@@ -608,13 +771,11 @@
         document.getElementById('overlay-screen').classList.add('hidden');
     }
 
-    // 按鈕控制邏輯
     const pauseBtn = document.getElementById('pause-btn');
     const restartBtn = document.getElementById('restart-btn');
 
     function togglePause() {
         if (gameState === 'START' || gameState === 'GAMEOVER') {
-            // 從頭開始
             arena.forEach(row => row.fill(0));
             player.score = 0; player.lines = 0; player.level = 1;
             player.nextObj = null; particles = []; lasers = [];
@@ -626,13 +787,11 @@
             lastTime = performance.now();
             update();
         } else if (gameState === 'PLAYING') {
-            // 暫停
             gameState = 'PAUSED';
             pauseBtn.innerText = '繼續';
             showOverlay('系統暫停', 'PAUSED');
             cancelAnimationFrame(reqId);
         } else if (gameState === 'PAUSED') {
-            // 繼續
             gameState = 'PLAYING';
             pauseBtn.innerText = '暫停';
             hideOverlay();
@@ -650,22 +809,20 @@
 
     pauseBtn.addEventListener('click', togglePause);
     restartBtn.addEventListener('click', forceRestart);
-    document.getElementById('overlay-btn').addEventListener('click', togglePause); // 讓畫面中間的按鈕也能點擊
+    document.getElementById('overlay-btn').addEventListener('click', togglePause);
 
-    // 鍵盤監聽
     document.addEventListener('keydown', event => {
         if (gameState !== 'PLAYING') return;
         switch(event.keyCode) {
-            case 37: playerMove(-1); break; // 左
-            case 39: playerMove(1); break;  // 右
-            case 40: playerDrop(); break;   // 下
-            case 38: playerRotate(1); break; // 上
-            case 32: playerHardDrop(); break; // 空白鍵
-            case 27: togglePause(); break; // ESC 鍵也可以暫停
+            case 37: playerMove(-1); break;
+            case 39: playerMove(1); break;
+            case 40: playerDrop(); break;
+            case 38: playerRotate(1); break;
+            case 32: playerHardDrop(); break;
+            case 27: togglePause(); break;
         }
     });
 
-    // 虛擬按鍵
     const bindTouch = (id, action) => {
         const el = document.getElementById(id);
         el.addEventListener('touchstart', e => { e.preventDefault(); if(gameState === 'PLAYING') action(); });
@@ -676,9 +833,7 @@
     bindTouch('btn-down', () => playerDrop());
     bindTouch('btn-up', () => playerRotate(1));
 
-    // 初始畫面
     draw();
-
 </script>
 </body>
 </html>
