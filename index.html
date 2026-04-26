@@ -1260,6 +1260,17 @@ const games = [
       { ver: "v1.0.1", text: "新增 ⚡ 快速殭屍（紫色，速度極快）+ 選單閃電特效" },
     ]
   },
+  {
+    name: "Cyber Tetris",
+    desc: "賽博風格俄羅斯方塊！炸彈、奈米、重力、量子特殊方塊讓你應接不暇，挑戰最高分！",
+    tag: "Puzzle",
+    accent: "#00f3ff",
+    stars: "★★★★☆",
+    url: "games/cyber-tetris/index.html",
+    icon: null,
+    collection: null,
+    painter: "cyber"
+  },
 ];
 
 const FIREBASE_CONFIG = {
@@ -1350,16 +1361,16 @@ function renderLeaderboardError(game) {
 }
 
 async function loadHomeLeaderboards() {
-  games.forEach(createLeaderboardShell);
+  games.filter(g => g.collection).forEach(createLeaderboardShell);
   if (!window.firebase) {
-    games.forEach(renderLeaderboardError);
+    games.filter(g => g.collection).forEach(renderLeaderboardError);
     return;
   }
 
   if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
   const db = firebase.firestore();
 
-  await Promise.all(games.map(async (game) => {
+  await Promise.all(games.filter(g => g.collection).map(async (game) => {
     try {
       const snap = await db.collection(game.collection).orderBy("score", "desc").limit(5).get();
       const rows = [];
@@ -1381,10 +1392,12 @@ games.forEach((g, i) => {
   // art wrapper
   const artDiv = document.createElement("div");
   artDiv.className = "card-art";
-  const img = document.createElement("img");
-  img.src = g.icon;
-  img.alt = `${g.name} 3A 風格圖示`;
-  artDiv.appendChild(img);
+  if (g.icon) {
+    const img = document.createElement("img");
+    img.src = g.icon;
+    img.alt = `${g.name} 3A 風格圖示`;
+    artDiv.appendChild(img);
+  }
   const cvs = document.createElement("canvas");
   cvs.setAttribute("aria-label", `${g.name} 動態預覽`);
   artDiv.appendChild(cvs);
