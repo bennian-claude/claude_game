@@ -1,0 +1,684 @@
+
+                align-items: center;
+                padding: 10px;
+            }
+            #sidebar {
+                flex-direction: row;
+                width: 100%;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .info-box { margin-bottom: 0; flex: 1; padding: 5px; }
+            #next-piece-canvas { display: none; } /* 手機隱藏預覽省空間 */
+            .info-box:first-child { display: none; }
+            #controls { display: grid; }
+            #tetris { width: 288px; height: 480px; }
+        }
+       
+        #overlay-screen {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 5, 15, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            backdrop-filter: blur(8px);
+            z-index: 10;
+        }
+       
+        #overlay-title {
+            color: #fff;
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 15px #00f3ff, 0 0 30px #0055ff;
+            font-weight: 900;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div id="game-wrapper">
+    <h1>CYBER TETRIS</h1>
+   
+    <div id="game-container">
+        <!-- 將畫布與疊加層包裝在一起，避免擋住右邊按鈕 -->
+        <div id="canvas-wrapper">
+            <!-- 主要遊戲畫布 (12 x 20) -->
+            <canvas id="tetris" width="360" height="600"></canvas>
+           
+            <!-- 狀態疊加層 (暫停 / 結束) -->
+            <div id="overlay-screen">
+                <h2 id="overlay-title">系統待機</h2>
+                <p id="overlay-desc" style="color: #8ab4f8; margin-bottom: 20px;">等待使用者輸入...</p>
+                <button id="overlay-btn" class="btn" style="width: auto; padding: 15px 40px; font-size: 1.2rem;">啟動 START</button>
+            </div>
+        </div>
+
+        <!-- 側邊欄 -->
+        <div id="sidebar">
+            <div>
+                <div class="info-box">
+                    <span>NEXT</span>
+                    <canvas id="next-piece-canvas" width="100" height="100"></canvas>
+                </div>
+                <div class="info-box">
+                    <span>SCORE</span>
+                    <strong id="score">0</strong>
+                </div>
+                <div class="info-box">
+                    <span>LEVEL</span>
+                    <strong id="level">1</strong>
+                </div>
+            </div>
+            <div>
+                <button id="pause-btn" class="btn">開始遊戲</button>
+                <button id="restart-btn" class="btn btn-restart">重新系統</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 手機虛擬按鍵 -->
+    <div id="controls">
+        <button id="btn-up" class="control-btn">↻</button>
+        <button id="btn-left" class="control-btn">←</button>
+        <button id="btn-down" class="control-btn">↓</button>
+        <button id="btn-right" class="control-btn">→</button>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('tetris');
+    const context = canvas.getContext('2d');
+    const nextCanvas = document.getElementById('next-piece-canvas');
+    const nextContext = nextCanvas.getContext('2d');
+
+    // 遊戲參數設定 (30px = 1格)
+    context.scale(30, 30);
+    nextContext.scale(25, 25);
+
+    // --- 高科技絕美配色 (移除舊螢光綠) ---
+    const colors = [
+        null,
+        '#00f3ff', // 1: T (賽博青)
+        '#ff003c', // 2: O (駭客紅)
+        '#e6ff00', // 3: L (酸性黃)
+        '#0055ff', // 4: J (深邃藍)
+        '#b700ff', // 5: I (霓虹紫)
+        '#00ffa3', // 6: S (薄荷青)
+        '#ff7000', // 7: Z (琥珀橘)
+        '#ff0000', // 8: 炸彈方塊 (危險閃紅)
+        '#ffffff', // 9: 奈米蟲 (純白發光)
+        '#444444', // 10: 高密度暗物質 (外殼)
+        '#ff00ff'  // 11: 量子疊加態 (幻影紫)
+    ];
+
+    // 經典方塊形狀
+    const standardPieces = {
+        'T': [[0,0,0], [1,1,1], [0,1,0]],
+        'O': [[2,2], [2,2]],
+        'L': [[0,3,0], [0,3,0], [0,3,3]],
+        'J': [[0,4,0], [0,4,0], [4,4,0]],
+        'I': [[0,5,0,0], [0,5,0,0], [0,5,0,0], [0,5,0,0]],
+        'S': [[0,6,6], [6,6,0], [0,0,0]],
+        'Z': [[7,7,0], [0,7,7], [0,0,0]]
+    };
+
+    // --- 特效系統 ---
+    let particles = [];
+    let lasers = [];
+   
+    // 建立粒子特效 (特效 2: 數據崩解)
+    function createParticles(x, y, colorStr, amount = 10) {
+        for(let i=0; i<amount; i++) {
+            particles.push({
+                x: x + 0.5, y: y + 0.5,
+                vx: (Math.random() - 0.5) * 0.4,
+                vy: (Math.random() - 0.5) * 0.4 - 0.2,
+                life: 1.0,
+                color: colorStr
+            });
+        }
+    }
+
+    function updateAndDrawEffects() {
+        // 畫雷射 (特效 7)
+        lasers.forEach((laser, index) => {
+            laser.life -= 0.05;
+            if(laser.life <= 0) { lasers.splice(index, 1); return; }
+            context.fillStyle = rgba(0, 243, 255, ${laser.life});
+            context.fillRect(0, laser.y + 0.5 - laser.life/2, 12, laser.life);
+            context.fillStyle = rgba(255, 255, 255, ${laser.life});
+            context.fillRect(0, laser.y + 0.4, 12, 0.2);
+        });
+
+        // 畫粒子
+        particles.forEach((p, index) => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.02; // 重力
+            p.life -= 0.03;
+            if(p.life <= 0) { particles.splice(index, 1); return; }
+            context.fillStyle = p.color;
+            context.globalAlpha = p.life;
+            context.fillRect(p.x, p.y, 0.15, 0.15);
+            context.globalAlpha = 1.0;
+        });
+    }
+
+    // --- 繪製高科技方塊 (Aesthetics Update) ---
+    function drawBlock(x, y, value, ctx, isGhost = false) {
+        if (value === 0) return;
+       
+        let color = colors[value];
+        // 如果是量子方塊，顏色讓他隨機閃爍
+        if (value === 11) color = colors[Math.floor(Math.random() * 7) + 1];
+
+        const alpha = isGhost ? 0.2 : 1.0;
+        ctx.globalAlpha = alpha;
+
+        // 玻璃感底框
+        ctx.fillStyle = 'rgba(0, 10, 25, 0.8)';
+        ctx.fillRect(x + 0.05, y + 0.05, 0.9, 0.9);
+
+        // 發光邊緣
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 0.08;
+        ctx.strokeRect(x + 0.1, y + 0.1, 0.8, 0.8);
+
+        // 內部科技紋理
+        if (value === 8) { // 炸彈: 閃爍紅心
+            ctx.fillStyle = Math.random() > 0.5 ? '#ff003c' : '#ffffff';
+            ctx.fillRect(x + 0.3, y + 0.3, 0.4, 0.4);
+        } else if (value === 9) { // 奈米蟲: 小巧晶片
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(x + 0.35, y + 0.35, 0.3, 0.3);
+            ctx.strokeStyle = '#00f3ff';
+            ctx.strokeRect(x + 0.25, y + 0.25, 0.5, 0.5);
+        } else if (value === 10) { // 暗物質: 沉重感與紫色核心
+            ctx.fillStyle = '#222';
+            ctx.fillRect(x + 0.15, y + 0.15, 0.7, 0.7);
+            ctx.fillStyle = '#b700ff';
+            ctx.fillRect(x + 0.35, y + 0.35, 0.3, 0.3);
+        } else { // 一般方塊: 半透明發光內核
+            ctx.fillStyle = color;
+            ctx.globalAlpha = isGhost ? 0.1 : 0.4;
+            ctx.fillRect(x + 0.2, y + 0.2, 0.6, 0.6);
+        }
+
+        ctx.globalAlpha = 1.0;
+    }
+
+    function drawMatrix(matrix, offset, ctx, isGhost = false) {
+        if (!matrix) return;
+        matrix.forEach((row, y) => {
+            row.forEach((value, x) => {
+                drawBlock(x + offset.x, y + offset.y, value, ctx, isGhost);
+            });
+        });
+    }
+
+    // 建立 12x20 版面
+    const arena = [];
+    while (arena.length < 20) arena.push(new Array(12).fill(0));
+
+    // --- 特殊方塊生成系統 ---
+    function generatePiece() {
+        // 將特殊方塊機率從 0.2 (20%) 降低到 0.1 (10%)
+        if (Math.random() < 0.1) {
+            const rand = Math.random();
+            if (rand < 0.25) return { matrix: [[8]], type: 'bomb' }; // 特殊1: 炸彈 (1x1)
+            if (rand < 0.50) return { matrix: [[9]], type: 'nano' }; // 特殊2: 奈米蟲 (1x1)
+            if (rand < 0.75) return { matrix: [[10,10],[10,10]], type: 'heavy' }; // 特殊3: 暗物質 (2x2)
+           
+            // 特殊5: 量子方塊 (借用普通形狀，但賦予量子屬性)
+            let normal = generateNormalMatrix();
+            // 把數字都換成 11 代表量子
+            let quantumMatrix = normal.map(row => row.map(v => v !== 0 ? 11 : 0));
+            return { matrix: quantumMatrix, type: 'quantum' };
+        }
+        return { matrix: generateNormalMatrix(), type: 'normal' };
+    }
+
+    function generateNormalMatrix() {
+        const pieceNames = 'TJLOSZI';
+        const name = pieceNames[Math.floor(Math.random() * pieceNames.length)];
+        return standardPieces[name].map(row => [...row]);
+    }
+
+    const player = {
+        pos: {x: 0, y: 0},
+        matrix: null,
+        nextObj: null,
+        specialType: 'normal',
+        score: 0, lines: 0, level: 1,
+        trail: [] // 特效4: 殘影
+    };
+
+    // 碰撞偵測
+    function collide(board, p) {
+        const m = p.matrix;
+        const o = p.pos;
+        for (let y = 0; y < m.length; ++y) {
+            for (let x = 0; x < m[y].length; ++x) {
+                if (m[y][x] !== 0 && (board[y + o.y] && board[y + o.y][x + o.x]) !== 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    function triggerScreenShake() {
+        const wrapper = document.getElementById('game-wrapper');
+        wrapper.classList.remove('shake-intense');
+        void wrapper.offsetWidth; // trigger reflow
+        wrapper.classList.add('shake-intense');
+    }
+
+    // 將方塊寫入版面
+    function merge(board, p) {
+        let isBomb = false;
+        p.matrix.forEach((row, y) => {
+            row.forEach((value, x) => {
+                if (value !== 0) {
+                    let by = y + p.pos.y;
+                    let bx = x + p.pos.x;
+                    // 加入邊界保護，防止超出版面導致 TypeError 當機
+                    if (by >= 0 && by < 20 && bx >= 0 && bx < 12) {
+                        board[by][bx] = value;
+                        if (value === 8) isBomb = true; // 引爆炸彈
+                        if (value === 11) board[by][bx] = Math.floor(Math.random() * 7) + 1; // 量子鎖定為隨機顏色
+                    }
+                }
+            });
+        });
+
+        // 炸彈方塊效果 (清除 5x5 範圍)
+        if (isBomb) {
+            triggerScreenShake();
+            const cx = p.pos.x;
+            const cy = p.pos.y;
+            for(let dy = -2; dy <= 2; dy++) {
+                for(let dx = -2; dx <= 2; dx++) {
+                    let by = cy + dy, bx = cx + dx;
+                    if(by >= 0 && by < 20 && bx >= 0 && bx < 12) {
+                        if (board[by][bx] !== 0) {
+                            createParticles(bx, by, colors[board[by][bx] > 7 ? 2 : board[by][bx]], 5);
+                            board[by][bx] = 0;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function rotate(matrix, dir) {
+        for (let y = 0; y < matrix.length; ++y) {
+            for (let x = 0; x < y; ++x) {
+                [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+            }
+        }
+        if (dir > 0) matrix.forEach(row => row.reverse());
+        else matrix.reverse();
+    }
+
+    // 消除與計分
+    function arenaSweep() {
+        let rowCount = 1;
+        let linesCleared = 0;
+       
+        outer: for (let y = arena.length - 1; y >= 0; --y) {
+            for (let x = 0; x < arena[y].length; ++x) {
+                if (arena[y][x] === 0) continue outer;
+            }
+
+            // 觸發粒子崩解特效
+            for (let x = 0; x < arena[y].length; ++x) {
+                createParticles(x, y, colors[arena[y][x]], 8);
+            }
+
+            const row = arena.splice(y, 1)[0].fill(0);
+            arena.unshift(row);
+            ++y;
+
+            player.score += rowCount * 100;
+            rowCount *= 2;
+            linesCleared++;
+        }
+       
+        if (linesCleared > 0) {
+            player.lines += linesCleared;
+            player.level = Math.floor(player.lines / 5) + 1;
+            updateScore();
+           
+            // 特效 7: 雷射切割 (一次消 4 行以上)
+            if (linesCleared >= 4) {
+                lasers.push({y: 19, life: 1.0}); // 簡單示意在底部發射
+                triggerScreenShake();
+            }
+        }
+    }
+
+    function playerReset() {
+        if (!player.nextObj) player.nextObj = generatePiece();
+       
+        player.matrix = player.nextObj.matrix;
+        player.specialType = player.nextObj.type;
+        player.nextObj = generatePiece();
+       
+        player.pos.y = 0;
+        player.pos.x = (Math.floor(arena[0].length / 2)) - (Math.floor(player.matrix[0].length / 2));
+        player.trail = [];
+       
+        drawNextPiece();
+
+        if (collide(arena, player)) {
+            gameState = 'GAMEOVER';
+            showOverlay('SYSTEM FAILURE', 最終分數: ${player.score});
+        }
+    }
+
+    // 取得幽靈方塊 (全息投影) 的落點
+    function getGhostPos() {
+        const ghost = { matrix: player.matrix, pos: { x: player.pos.x, y: player.pos.y } };
+        while (!collide(arena, ghost)) { ghost.pos.y++; }
+        ghost.pos.y--;
+        return ghost.pos;
+    }
+
+    function playerDrop() {
+        player.pos.y++;
+        // 紀錄殘影
+        player.trail.push({x: player.pos.x, y: player.pos.y, alpha: 0.3});
+        if(player.trail.length > 4) player.trail.shift();
+
+        if (collide(arena, player)) {
+            // 準確計算方塊的實際高度，避免帶有空列的方塊誤判碰到底部
+            let actualHeight = 0;
+            for (let y = 0; y < player.matrix.length; y++) {
+                if (player.matrix[y].some(v => v !== 0)) actualHeight = y + 1;
+            }
+            let hitFloor = (player.pos.y + actualHeight > arena.length);
+           
+            if (player.specialType === 'heavy' && !hitFloor) {
+                // 暗物質方塊效果 (粉碎下方障礙物，直到碰到底)
+                player.matrix.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value !== 0) {
+                            let by = y + player.pos.y;
+                            let bx = x + player.pos.x;
+                            // 加入邊界保護
+                            if (by >= 0 && by < 20 && bx >= 0 && bx < 12 && arena[by][bx] !== 0) {
+                                createParticles(bx, by, '#444', 5);
+                                arena[by][bx] = 0; // 直接粉碎
+                                player.score += 20;
+                            }
+                        }
+                    });
+                });
+                triggerScreenShake();
+            } else {
+                player.pos.y--;
+                merge(arena, player);
+                arenaSweep(); // 修正：先消除行數再重置方塊，避免誤判滿版
+                playerReset();
+            }
+        }
+        dropCounter = 0;
+    }
+   
+    function playerHardDrop() {
+        while (!collide(arena, player)) { player.pos.y++; }
+       
+        if (player.specialType !== 'heavy') {
+            player.pos.y--;
+        } else {
+            // 退回撞擊前一格 (修復暗物質方塊沉底時的計算越界)
+            player.pos.y--;
+           
+            // 暗物質強制貫穿到底部
+            let actualHeight = 0;
+            for (let y = 0; y < player.matrix.length; y++) {
+                if (player.matrix[y].some(v => v !== 0)) actualHeight = y + 1;
+            }
+            while(player.pos.y < 20 - actualHeight) {
+                 player.pos.y++;
+                 // 粉碎沿途
+                 player.matrix.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        let by = y + player.pos.y;
+                        let bx = x + player.pos.x;
+                        if(value !== 0 && by >= 0 && by < 20 && bx >= 0 && bx < 12 && arena[by][bx] !== 0) {
+                            arena[by][bx] = 0;
+                            createParticles(bx, by, '#444', 3);
+                        }
+                    });
+                 });
+            }
+        }
+       
+        merge(arena, player);
+        triggerScreenShake();
+        arenaSweep(); // 修正：先消除行數再重置方塊
+        playerReset();
+        dropCounter = 0;
+    }
+
+    function playerMove(offset) {
+        player.pos.x += offset;
+        if (collide(arena, player)) player.pos.x -= offset;
+    }
+
+    function playerRotate(dir) {
+        // 奈米蟲或炸彈不用轉
+        if(player.matrix.length === 1) return;
+       
+        const pos = player.pos.x;
+        let offset = 1;
+        rotate(player.matrix, dir);
+        while (collide(arena, player)) {
+            player.pos.x += offset;
+            offset = -(offset + (offset > 0 ? 1 : -1));
+            if (offset > player.matrix[0].length) {
+                rotate(player.matrix, -dir);
+                player.pos.x = pos;
+                return;
+            }
+        }
+    }
+
+    function draw() {
+        // 清空並畫背景網格
+        context.fillStyle = '#00040a';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+       
+        context.fillStyle = 'rgba(0, 243, 255, 0.03)';
+        for(let i=0; i<12; i++) {
+            for(let j=0; j<20; j++) {
+                context.fillRect(i + 0.05, j + 0.05, 0.9, 0.9);
+            }
+        }
+
+        drawMatrix(arena, {x: 0, y: 0}, context);
+
+        if (player.matrix && gameState === 'PLAYING') {
+            // 畫幽靈方塊 (特效 3/4)
+            const ghostPos = getGhostPos();
+            drawMatrix(player.matrix, ghostPos, context, true);
+           
+            // 畫殘影
+            player.trail.forEach(t => {
+                t.alpha -= 0.05;
+                if(t.alpha > 0) {
+                    context.globalAlpha = t.alpha;
+                    drawMatrix(player.matrix, t, context, true);
+                }
+            });
+            context.globalAlpha = 1.0;
+
+            drawMatrix(player.matrix, player.pos, context);
+        }
+       
+        updateAndDrawEffects();
+    }
+   
+    function drawNextPiece() {
+        nextContext.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+        if (player.nextObj) {
+            const m = player.nextObj.matrix;
+            const offsetX = (4 - m[0].length) / 2;
+            const offsetY = (4 - m.length) / 2;
+            drawMatrix(m, {x: offsetX, y: offsetY}, nextContext);
+        }
+    }
+
+    function updateScore() {
+        document.getElementById('score').innerText = player.score;
+        document.getElementById('level').innerText = player.level;
+    }
+
+    // 遊戲狀態機
+    let dropCounter = 0;
+    let quantumTimer = 0;
+    let lastTime = 0;
+    let gameState = 'START'; // START, PLAYING, PAUSED, GAMEOVER
+    let reqId;
+
+    function update(time = 0) {
+        if (gameState !== 'PLAYING') return;
+       
+        const deltaTime = time - lastTime;
+        lastTime = time;
+
+        // 特效 9: 危機紅光
+        const isDanger = arena[0].some(x=>x) || arena[1].some(x=>x) || arena[2].some(x=>x);
+        const container = document.getElementById('game-container');
+        if (isDanger) container.classList.add('danger-vignette');
+        else container.classList.remove('danger-vignette');
+
+        // 特效 10: 子彈時間 (快到頂端時減速給玩家反應)
+        let currentDropInterval = Math.max(100, 1000 - (player.level - 1) * 100);
+        if (isDanger && player.pos.y < 4) currentDropInterval *= 1.5; // 放慢 1.5 倍
+
+        dropCounter += deltaTime;
+        if (dropCounter > currentDropInterval) {
+            playerDrop();
+        }
+
+        // 特殊 5: 量子方塊變化
+        if (player.specialType === 'quantum') {
+            quantumTimer += deltaTime;
+            if (quantumTimer > 300) { // 每 0.3 秒變換形狀
+                quantumTimer = 0;
+                let newMatrix = generateNormalMatrix().map(row => row.map(v => v !== 0 ? 11 : 0));
+                let oldMatrix = player.matrix;
+                player.matrix = newMatrix;
+                // 如果變形會卡住，就變回來
+                if (collide(arena, player)) player.matrix = oldMatrix;
+            }
+        }
+
+        draw();
+        reqId = requestAnimationFrame(update);
+    }
+
+    function showOverlay(title, desc = '') {
+        const overlay = document.getElementById('overlay-screen');
+        document.getElementById('overlay-title').innerText = title;
+        document.getElementById('overlay-desc').innerText = desc;
+       
+        // 依照遊戲狀態切換按鈕文字
+        const overlayBtn = document.getElementById('overlay-btn');
+        if (gameState === 'GAMEOVER') {
+            overlayBtn.innerText = '重新啟動 RESTART';
+        } else if (gameState === 'PAUSED') {
+            overlayBtn.innerText = '繼續 RESUME';
+        } else {
+            overlayBtn.innerText = '啟動 START';
+        }
+       
+        overlay.classList.remove('hidden');
+    }
+
+    function hideOverlay() {
+        document.getElementById('overlay-screen').classList.add('hidden');
+    }
+
+    // 按鈕控制邏輯
+    const pauseBtn = document.getElementById('pause-btn');
+    const restartBtn = document.getElementById('restart-btn');
+
+    function togglePause() {
+        if (gameState === 'START' || gameState === 'GAMEOVER') {
+            // 從頭開始
+            arena.forEach(row => row.fill(0));
+            player.score = 0; player.lines = 0; player.level = 1;
+            player.nextObj = null; particles = []; lasers = [];
+            playerReset();
+            updateScore();
+            gameState = 'PLAYING';
+            hideOverlay();
+            pauseBtn.innerText = '暫停';
+            lastTime = performance.now();
+            update();
+        } else if (gameState === 'PLAYING') {
+            // 暫停
+            gameState = 'PAUSED';
+            pauseBtn.innerText = '繼續';
+            showOverlay('系統暫停', 'PAUSED');
+            cancelAnimationFrame(reqId);
+        } else if (gameState === 'PAUSED') {
+            // 繼續
+            gameState = 'PLAYING';
+            pauseBtn.innerText = '暫停';
+            hideOverlay();
+            lastTime = performance.now();
+            update();
+        }
+        pauseBtn.blur();
+    }
+
+    function forceRestart() {
+        gameState = 'START';
+        togglePause();
+        restartBtn.blur();
+    }
+
+    pauseBtn.addEventListener('click', togglePause);
+    restartBtn.addEventListener('click', forceRestart);
+    document.getElementById('overlay-btn').addEventListener('click', togglePause); // 讓畫面中間的按鈕也能點擊
+
+    // 鍵盤監聽
+    document.addEventListener('keydown', event => {
+        if (gameState !== 'PLAYING') return;
+        switch(event.keyCode) {
+            case 37: playerMove(-1); break; // 左
+            case 39: playerMove(1); break;  // 右
+            case 40: playerDrop(); break;   // 下
+            case 38: playerRotate(1); break; // 上
+            case 32: playerHardDrop(); break; // 空白鍵
+            case 27: togglePause(); break; // ESC 鍵也可以暫停
+        }
+    });
+
+    // 虛擬按鍵
+    const bindTouch = (id, action) => {
+        const el = document.getElementById(id);
+        el.addEventListener('touchstart', e => { e.preventDefault(); if(gameState === 'PLAYING') action(); });
+        el.addEventListener('mousedown', () => { if(gameState === 'PLAYING') action(); });
+    };
+    bindTouch('btn-left', () => playerMove(-1));
+    bindTouch('btn-right', () => playerMove(1));
+    bindTouch('btn-down', () => playerDrop());
+    bindTouch('btn-up', () => playerRotate(1));
+
+    // 初始畫面
+    draw();
+
+</script>
+</body>
+</html>
