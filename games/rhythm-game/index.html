@@ -336,9 +336,10 @@
             <button class="song-btn" onclick="selectSong('TWINKLE', this)">小星星 ⭐</button>
             <button class="song-btn" onclick="selectSong('BIRTHDAY', this)">生日快樂 🎂</button>
             <button class="song-btn" onclick="selectSong('JINGLE', this)">鈴兒響叮噹 🎄</button>
+            <button class="song-btn" onclick="selectSong('MARY', this)">瑪麗有隻小羊 🐑</button>
             <button class="song-btn" onclick="selectSong('RANDOM', this)">隨機生成</button>
         </div>
-        <p style="font-size:11px;opacity:0.3;margin-top:-20px">Release v1.0.3</p>
+        <p style="font-size:11px;opacity:0.3;margin-top:-20px">Release v1.0.4</p>
         <div class="diff-container">
             <button class="btn btn-easy" onclick="initGame('EASY')">EASY</button>
             <button class="btn btn-normal" onclick="initGame('NORMAL')">NORMAL</button>
@@ -645,6 +646,7 @@
             else if (currentSong === 'TWINKLE') { SONG_LENGTH = 24; generateTwinkle(); }
             else if (currentSong === 'BIRTHDAY') { SONG_LENGTH = 20; generateBirthday(); }
             else if (currentSong === 'JINGLE') { SONG_LENGTH = 28; generateJingleBells(); }
+            else if (currentSong === 'MARY') { SONG_LENGTH = 22; generateMary(); }
             else if (currentSong === 'RANDOM') { SONG_LENGTH = 32; generateRandomTrack(); }
             else if (currentSong === '404') { SONG_LENGTH = 20; generateTrack404(); }
             setDifficulty(currentDifficulty); totalNotes = notes.length;
@@ -699,6 +701,45 @@
             });
             if (currentDifficulty !== 'EASY') {
                 [0,8,16,24].forEach(beat => scheduleBassNote(s + beat * b + audioStartTime, 130.81, b * 6));
+            }
+        }
+
+        function generateMary() {
+            const s = 2.0, b = 0.4;
+            // Mary Had a Little Lamb in C major
+            // C4=261.63 D4=293.66 E4=329.63 G4=392.00
+            // lanes: C→0, D→1, E→2, G→3
+            const melody = [
+                // "Mary had a little lamb, little lamb, little lamb"
+                [0,2,329.63],[1,1,293.66],[2,0,261.63],[3,1,293.66],
+                [4,2,329.63],[5,2,329.63],[6,2,329.63],
+                [8,1,293.66],[9,1,293.66],[10,1,293.66],
+                [12,2,329.63],[13,3,392.00],[14,3,392.00],
+                // "Mary had a little lamb, its fleece was white as snow"
+                [16,2,329.63],[17,1,293.66],[18,0,261.63],[19,1,293.66],
+                [20,2,329.63],[21,2,329.63],[22,2,329.63],[23,2,329.63],
+                [24,1,293.66],[25,1,293.66],[26,2,329.63],[27,1,293.66],
+                [28,0,261.63],
+                // Verse 2 repeat
+                [32,2,329.63],[33,1,293.66],[34,0,261.63],[35,1,293.66],
+                [36,2,329.63],[37,2,329.63],[38,2,329.63],
+                [40,1,293.66],[41,1,293.66],[42,1,293.66],
+                [44,2,329.63],[45,3,392.00],[46,3,392.00],
+                [48,2,329.63],[49,1,293.66],[50,0,261.63],[51,1,293.66],
+                [52,2,329.63],[53,2,329.63],[54,2,329.63],[55,2,329.63],
+                [56,1,293.66],[57,1,293.66],[58,2,329.63],[59,1,293.66],
+                [60,0,261.63]
+            ];
+            melody.forEach(([beat, lane, freq]) => {
+                const t = s + beat * b;
+                notes.push(new Note(t, lane, 'tap', 0));
+                scheduleMelodyNote(t + audioStartTime, freq, 0.32, 0.2);
+            });
+            if (currentDifficulty !== 'EASY') {
+                [0, 16, 32, 48].forEach(beat => scheduleBassNote(s + beat * b + audioStartTime, 130.81, b * 15));
+            }
+            if (currentDifficulty === 'HARD') {
+                for (let beat = 0; beat < 62; beat += 4) scheduleKick(s + beat * b + audioStartTime);
             }
         }
 

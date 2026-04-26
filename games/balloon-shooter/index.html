@@ -135,7 +135,7 @@
 
 <div id="startScreen" class="overlay">
   <h1>🎈 射氣球大作戰 🎈</h1>
-  <p style="font-size:12px;opacity:0.45;margin-bottom:4px">Release v1.0.3</p>
+  <p style="font-size:12px;opacity:0.45;margin-bottom:4px">Release v1.0.4</p>
   <p>20 秒內射破氣球並收集掉落物拿最高分！</p>
   <div class="rules">
     <span>🎈 氣球 +1</span>
@@ -254,6 +254,7 @@
     freeze() { [1046.5, 1318.5, 1567.98].forEach((f, i) => playTone({ type: 'sine', from: f, to: f * 0.5, dur: 0.4, vol: 0.2, delay: i * 0.07 })); },
     multiShot() { [800, 900, 1000].forEach((f, i) => playTone({ type: 'square', from: f, to: f, dur: 0.1, vol: 0.18, delay: i * 0.04 })); },
     magnet() { [300, 350, 400, 350].forEach((f, i) => playTone({ type: 'sine', from: f, to: f * 1.3, dur: 0.25, vol: 0.18, delay: i * 0.08 })); },
+    shield() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => playTone({ type: 'sine', from: f, to: f, dur: 0.2, vol: 0.15, delay: i * 0.06 })); },
     gameover() { playTone({ type: 'triangle', from: 300, to: 100, dur: 0.8, vol: 0.3 }); },
     bgmTick(high) {
       const f = high ? 987.77 : 783.99; // B5 / G5
@@ -274,6 +275,7 @@
     freezeFrames: 0,
     multiShotFrames: 0,
     magnetFrames: 0,
+    shieldFrames: 0,
     spawnCounter: 0,
     mouse: { x: W / 2, y: H / 2 },
     shakeFrames: 0,
@@ -307,6 +309,7 @@
     else if (type === 'freeze') state.items.push({ ...base, type, r: 22, vy: -2, g: 0.12, vx: (Math.random() - 0.5) * 1.5, angle: 0 });
     else if (type === 'multiShot') state.items.push({ ...base, type, r: 22, vy: -3, g: 0.18, vx: (Math.random() - 0.5) * 2, angle: 0 });
     else if (type === 'magnet') state.items.push({ ...base, type, r: 22, vy: -2.5, g: 0.14, vx: (Math.random() - 0.5) * 1.8, angle: 0 });
+    else if (type === 'shield') state.items.push({ ...base, type, r: 22, vy: -2.8, g: 0.16, vx: (Math.random() - 0.5) * 1.6, angle: 0 });
   }
   function maybeDropFromBalloon(x, y) {
     const r = Math.random();
@@ -316,6 +319,7 @@
     else if (r < 0.80) spawnItem('freeze', x, y);
     else if (r < 0.90) spawnItem('multiShot', x, y);
     else if (r < 0.96) spawnItem('magnet', x, y);
+    else if (r < 0.99) spawnItem('shield', x, y);
   }
   function spawnParticles(x, y, color) {
     for (let i = 0; i < 15; i++) {
@@ -539,6 +543,24 @@
     }
     ctx.globalAlpha = 1;
   }
+  function drawShield(it) {
+    ctx.save();
+    ctx.translate(it.x, it.y);
+    it.angle += 0.05;
+    ctx.rotate(it.angle);
+    const r = it.r;
+    const pulse = 0.6 + 0.4 * Math.sin(Date.now() * 0.007);
+    ctx.shadowBlur = 20 * pulse; ctx.shadowColor = '#00ddff';
+    ctx.strokeStyle = '#00ddff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, 0, r - 2, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = 'rgba(0,221,255,0.15)';
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.font = `${r * 1.4}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🛡️', 0, 1);
+    ctx.restore();
+  }
   function drawMagnet(it) {
     ctx.save();
     ctx.translate(it.x, it.y);
@@ -634,10 +656,11 @@
       spawnParticles(it.x, it.y, '#ffd43b');
       sfx.gift();
     } else if (it.type === 'bomb') {
-      if (state.invincibleFrames > 0) {
-        state.score += 5;
-        spawnParticles(it.x, it.y, '#ffd700');
-        sfx.gift();
+      if (state.invincibleFrames > 0 || state.shieldFrames > 0) {
+        state.score += state.invincibleFrames > 0 ? 5 : 0;
+        spawnParticles(it.x, it.y, '#00ddff');
+        spawnParticles(it.x, it.y, '#ffffff');
+        sfx.freeze();
       } else {
         state.score -= 10;
         state.shakeFrames = 30;
@@ -664,6 +687,11 @@
       spawnParticles(it.x, it.y, '#ff4488');
       spawnParticles(it.x, it.y, '#4488ff');
       sfx.magnet();
+    } else if (it.type === 'shield') {
+      state.shieldFrames = 300;
+      spawnParticles(it.x, it.y, '#00ddff');
+      spawnParticles(it.x, it.y, '#ffffff');
+      sfx.shield();
     }
     updateUI();
   }
@@ -716,8 +744,20 @@
         bar.style.opacity = (state.frame % 20 < 10) ? '1' : '0.7';
         bar.textContent = `🧲 磁吸 ${Math.ceil(state.magnetFrames / 60)}s`;
       }
-    } else if (state.freezeFrames <= 0 && state.multiShotFrames <= 0) {
+    } else if (state.freezeFrames <= 0 && state.multiShotFrames <= 0 && state.shieldFrames <= 0) {
       document.getElementById('freezeBar').style.display = 'none';
+    }
+
+    // shield countdown
+    if (state.shieldFrames > 0) {
+      state.shieldFrames--;
+      const bar = document.getElementById('freezeBar');
+      if (state.freezeFrames <= 0 && state.multiShotFrames <= 0 && state.magnetFrames <= 0) {
+        bar.style.display = 'block';
+        bar.style.background = 'linear-gradient(90deg,#00ddff,#ffffff)';
+        bar.style.opacity = (state.frame % 20 < 10) ? '1' : '0.7';
+        bar.textContent = `🛡️ 護盾 ${Math.ceil(state.shieldFrames / 60)}s`;
+      }
     }
 
     // balloons
@@ -789,6 +829,7 @@
       else if (it.type === 'freeze') drawFreeze(it);
       else if (it.type === 'multiShot') drawMultiShot(it);
       else if (it.type === 'magnet') drawMagnet(it);
+      else if (it.type === 'shield') drawShield(it);
     }
     drawParticles();
     drawCursor();
@@ -833,6 +874,7 @@
     state.freezeFrames = 0;
     state.multiShotFrames = 0;
     state.magnetFrames = 0;
+    state.shieldFrames = 0;
     state.spawnCounter = 0;
     state.shakeFrames = 0;
     state.running = true;
