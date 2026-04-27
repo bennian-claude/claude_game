@@ -172,6 +172,95 @@
             box-shadow: 0 0 20px #ff003c;
         }
 
+        .btn-home {
+            border-color: #00ffa3;
+            background: rgba(0, 255, 163, 0.09);
+            color: #d8fff2;
+            text-shadow: 0 0 5px #00ffa3;
+        }
+        .btn-home:hover {
+            background: #00ffa3;
+            color: #00130d;
+            box-shadow: 0 0 20px #00ffa3;
+        }
+
+        #leaderboard-panel {
+            width: 100%;
+            margin-top: 12px;
+            padding: 10px;
+            border: 1px solid rgba(0, 243, 255, 0.32);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.46);
+            box-shadow: inset 0 0 16px rgba(0, 243, 255, 0.08);
+            box-sizing: border-box;
+        }
+        #leaderboard-panel h3 {
+            margin: 0 0 8px;
+            font-size: 0.78rem;
+            letter-spacing: 1px;
+            color: #fff;
+        }
+        #score-submit {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        #player-name {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid rgba(0, 243, 255, 0.4);
+            border-radius: 6px;
+            padding: 8px;
+            background: rgba(0, 5, 15, 0.88);
+            color: #fff;
+            outline: none;
+        }
+        #leaderboard-list {
+            display: grid;
+            gap: 6px;
+            max-height: 170px;
+            overflow: auto;
+        }
+        .lb-row {
+            display: grid;
+            grid-template-columns: 22px 1fr auto;
+            gap: 6px;
+            align-items: center;
+            padding: 6px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            font-size: 0.78rem;
+            text-transform: none;
+        }
+        .lb-row.mine {
+            background: rgba(0, 243, 255, 0.16);
+            box-shadow: inset 0 0 0 1px rgba(0, 243, 255, 0.35);
+        }
+        .lb-rank { color: #8ab4f8; }
+        .lb-name {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #fff;
+        }
+        .lb-score {
+            color: #00f3ff;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+        .lb-meta {
+            grid-column: 2 / 4;
+            color: #8ab4f8;
+            font-size: 0.68rem;
+        }
+        .lb-state {
+            color: #8ab4f8;
+            font-size: 0.76rem;
+            line-height: 1.45;
+            text-transform: none;
+        }
+
         #controls {
             display: none;
             grid-template-columns: repeat(3, 60px);
@@ -223,6 +312,7 @@
             .info-box:first-child { display: none; }
             #controls { display: grid; }
             #tetris { width: 288px; height: 480px; }
+            #leaderboard-panel { order: 10; }
         }
 
         #overlay-screen {
@@ -253,6 +343,7 @@
 
 <div id="game-wrapper">
     <h1>CYBER TETRIS</h1>
+    <p style="margin:-8px 0 0;color:rgba(255,255,255,0.35);font-size:11px;letter-spacing:2px">Release v1.0.5</p>
 
     <div id="game-container">
         <div id="canvas-wrapper">
@@ -283,6 +374,15 @@
             <div>
                 <button id="pause-btn" class="btn">開始遊戲</button>
                 <button id="restart-btn" class="btn btn-restart">重新系統</button>
+                <button id="home-btn" class="btn btn-home" type="button" onclick="window.location.href='../../index.html'">回主畫面</button>
+                <div id="leaderboard-panel">
+                    <h3>CYBER 排行榜 TOP 10</h3>
+                    <div id="score-submit" class="hidden">
+                        <input id="player-name" maxlength="20" placeholder="輸入名字 / 座號">
+                        <button id="submit-score-btn" class="btn" type="button">送出分數</button>
+                    </div>
+                    <div id="leaderboard-list"><div class="lb-state">載入排行榜中...</div></div>
+                </div>
             </div>
         </div>
     </div>
@@ -316,7 +416,8 @@
         '#ff0000',
         '#ffffff',
         '#444444',
-        '#ff00ff'
+        '#ff00ff',
+        '#ffee00'
     ];
 
     const standardPieces = {
@@ -396,6 +497,11 @@
             ctx.fillRect(x + 0.15, y + 0.15, 0.7, 0.7);
             ctx.fillStyle = '#b700ff';
             ctx.fillRect(x + 0.35, y + 0.35, 0.3, 0.3);
+        } else if (value === 12) {
+            ctx.fillStyle = '#ffee00';
+            ctx.fillRect(x + 0.12, y + 0.42, 0.76, 0.16);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(x + 0.28, y + 0.28, 0.44, 0.44);
         } else {
             ctx.fillStyle = color;
             ctx.globalAlpha = isGhost ? 0.1 : 0.4;
@@ -418,11 +524,12 @@
     while (arena.length < 20) arena.push(new Array(12).fill(0));
 
     function generatePiece() {
-        if (Math.random() < 0.1) {
+        if (Math.random() < 0.13) {
             const rand = Math.random();
-            if (rand < 0.25) return { matrix: [[8]], type: 'bomb' };
-            if (rand < 0.50) return { matrix: [[9]], type: 'nano' };
-            if (rand < 0.75) return { matrix: [[10,10],[10,10]], type: 'heavy' };
+            if (rand < 0.20) return { matrix: [[8]], type: 'bomb' };
+            if (rand < 0.40) return { matrix: [[9]], type: 'nano' };
+            if (rand < 0.60) return { matrix: [[10,10],[10,10]], type: 'heavy' };
+            if (rand < 0.80) return { matrix: [[12,12,12,12]], type: 'laser' };
 
             let normal = generateNormalMatrix();
             let quantumMatrix = normal.map(row => row.map(v => v !== 0 ? 11 : 0));
@@ -468,6 +575,7 @@
 
     function merge(board, p) {
         let isBomb = false;
+        const laserRows = new Set();
         p.matrix.forEach((row, y) => {
             row.forEach((value, x) => {
                 if (value !== 0) {
@@ -477,6 +585,7 @@
                         board[by][bx] = value;
                         if (value === 8) isBomb = true;
                         if (value === 11) board[by][bx] = Math.floor(Math.random() * 7) + 1;
+                        if (value === 12) laserRows.add(by);
                     }
                 }
             });
@@ -498,6 +607,15 @@
                 }
             }
         }
+        laserRows.forEach(row => {
+            if (row < 0 || row >= board.length) return;
+            for (let x = 0; x < board[row].length; x++) {
+                if (board[row][x] !== 0) createParticles(x, row, '#ffee00', 6);
+                board[row][x] = 0;
+            }
+            lasers.push({y: row, life: 1.2});
+            player.score += 150;
+        });
     }
 
     function rotate(matrix, dir) {
@@ -560,6 +678,7 @@
         if (collide(arena, player)) {
             gameState = 'GAMEOVER';
             showOverlay('SYSTEM FAILURE', `最終分數: ${player.score}`);
+            if (window.onCyberTetrisEnd) window.onCyberTetrisEnd(player.score, player.lines, player.level);
         }
     }
 
@@ -783,6 +902,7 @@
             updateScore();
             gameState = 'PLAYING';
             hideOverlay();
+            if (window.onCyberTetrisStart) window.onCyberTetrisStart();
             pauseBtn.innerText = '暫停';
             lastTime = performance.now();
             update();
@@ -834,6 +954,116 @@
     bindTouch('btn-up', () => playerRotate(1));
 
     draw();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+    (function() {
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyCFVDsAvTx10-eshL3RYiSzyYlPFEvqyz8",
+            authDomain: "claude-code-project-3a0d3.firebaseapp.com",
+            projectId: "claude-code-project-3a0d3",
+            storageBucket: "claude-code-project-3a0d3.firebasestorage.app",
+            messagingSenderId: "451203824543",
+            appId: "1:451203824543:web:fa2e9bb8c2c0f69c339baa"
+        };
+
+        if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+        const db = firebase.firestore();
+        const COL = 'cyber_tetris';
+        let currentScore = 0;
+        let currentLines = 0;
+        let currentLevel = 1;
+        let myName = '';
+
+        const submitBox = document.getElementById('score-submit');
+        const nameInput = document.getElementById('player-name');
+        const submitBtn = document.getElementById('submit-score-btn');
+        const listEl = document.getElementById('leaderboard-list');
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        async function loadLeaderboard() {
+            listEl.innerHTML = '<div class="lb-state">載入排行榜中...</div>';
+            try {
+                const snap = await db.collection(COL).orderBy('score', 'desc').limit(10).get();
+                const rows = [];
+                snap.forEach(doc => rows.push(doc.data()));
+                if (!rows.length) {
+                    listEl.innerHTML = '<div class="lb-state">還沒有紀錄，第一名等你來拿。</div>';
+                    return;
+                }
+                listEl.innerHTML = rows.map((row, index) => {
+                    const mine = myName && row.name === myName && row.score === currentScore;
+                    const lines = Number(row.lines || 0);
+                    const level = Number(row.level || 1);
+                    return `
+                        <div class="lb-row ${mine ? 'mine' : ''}">
+                            <span class="lb-rank">${index + 1}</span>
+                            <span class="lb-name">${escapeHtml(row.name || '匿名玩家')}</span>
+                            <span class="lb-score">${Number(row.score || 0).toLocaleString('zh-TW')}</span>
+                            <span class="lb-meta">消除 ${lines} 行 · LV ${level}</span>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Failed to load cyber_tetris leaderboard', error);
+                listEl.innerHTML = '<div class="lb-state">排行榜讀取失敗，請稍後再試。</div>';
+            }
+        }
+
+        window.onCyberTetrisStart = function() {
+            submitBox.classList.add('hidden');
+            myName = '';
+        };
+
+        window.onCyberTetrisEnd = function(score, lines, level) {
+            currentScore = Number(score || 0);
+            currentLines = Number(lines || 0);
+            currentLevel = Number(level || 1);
+            submitBtn.disabled = false;
+            submitBtn.textContent = '送出分數';
+            submitBox.classList.remove('hidden');
+            nameInput.focus();
+            loadLeaderboard();
+        };
+
+        submitBtn.addEventListener('click', async () => {
+            const name = nameInput.value.trim();
+            if (!name) {
+                nameInput.focus();
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = '送出中...';
+            try {
+                myName = name;
+                await db.collection(COL).add({
+                    name,
+                    score: currentScore,
+                    lines: currentLines,
+                    level: currentLevel,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                submitBox.classList.add('hidden');
+                await loadLeaderboard();
+            } catch (error) {
+                console.error('Failed to submit cyber_tetris score', error);
+                submitBtn.disabled = false;
+                submitBtn.textContent = '重試送出';
+            }
+        });
+
+        loadLeaderboard();
+    })();
 </script>
 </body>
 </html>

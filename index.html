@@ -137,6 +137,43 @@
       transition: opacity 0.45s ease, visibility 0.45s ease;
     }
 
+    .entry-gate::before,
+    .entry-gate::after {
+      content: "";
+      position: absolute;
+      inset: 50% auto auto 50%;
+      width: min(72vw, 620px);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .entry-gate::before {
+      border: 1px solid rgba(0,245,255,0.22);
+      box-shadow:
+        0 0 45px rgba(0,245,255,0.22),
+        inset 0 0 70px rgba(255,176,0,0.08);
+      animation: portalSpin 9s linear infinite;
+      background:
+        conic-gradient(from 0deg, transparent, rgba(0,245,255,0.28), transparent 32%, rgba(255,176,0,0.22), transparent 68%, rgba(85,255,136,0.18), transparent);
+      mask-image: radial-gradient(circle, transparent 55%, #000 56%, #000 62%, transparent 64%);
+    }
+
+    .entry-gate::after {
+      border: 1px solid rgba(255,255,255,0.12);
+      animation: portalPulse 2.8s ease-in-out infinite;
+    }
+
+    @keyframes portalSpin {
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    @keyframes portalPulse {
+      0%, 100% { opacity: 0.2; transform: translate(-50%, -50%) scale(0.82); }
+      50% { opacity: 0.65; transform: translate(-50%, -50%) scale(1.04); }
+    }
+
     .entry-gate.is-hidden {
       opacity: 0;
       visibility: hidden;
@@ -145,6 +182,8 @@
 
     .entry-card {
       width: min(460px, 100%);
+      position: relative;
+      z-index: 1;
       border: 1px solid rgba(255,255,255,0.16);
       border-radius: 8px;
       background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.035));
@@ -768,7 +807,7 @@
   <main class="game-grid" id="gameGrid"></main>
 </div>
 
-<footer>GAME HUB &nbsp;·&nbsp; <span>班級互動平台</span> &nbsp;·&nbsp; Built with Claude Code &nbsp;·&nbsp; <span>Release v1.0.4</span></footer>
+<footer>GAME HUB &nbsp;·&nbsp; <span>班級互動平台</span> &nbsp;·&nbsp; Built with Claude Code &nbsp;·&nbsp; <span>Release v1.0.5</span></footer>
 
 <!-- ══════════════════ STARFIELD ══════════════════ -->
 <script>
@@ -1319,9 +1358,11 @@ const games = [
     stars: "★★★★☆",
     url: "games/balloon-shooter/index.html",
     icon: "assets/images/balloon-aaa-icon.png",
+    covers: ["assets/images/balloon-aaa-icon.png", "assets/images/balloon-aaa-icon-v105.png"],
     collection: "balloon_shooter",
     painter: "balloon",
     changelog: [
+      { ver: "v1.0.5", text: "新增 ⚡ 加速針 — 5 秒內命中範圍放大" },
       { ver: "v1.0.4", text: "新增 🛡️ 護盾道具 — 5 秒內炸彈無效" },
       { ver: "v1.0.3", text: "新增 🧲 磁鐵道具 — 吸引氣球靠近滑鼠" },
       { ver: "v1.0.2", text: "新增 🎯 三叉針 — 一次爆 3 顆氣球" },
@@ -1336,9 +1377,11 @@ const games = [
     stars: "★★★★★",
     url: "games/rhythm-game/index.html",
     icon: "assets/images/rhythm-aaa-icon.png",
+    covers: ["assets/images/rhythm-aaa-icon.png", "assets/images/rhythm-aaa-icon-v105.png"],
     collection: "rhythm_game",
     painter: "rhythm",
     changelog: [
+      { ver: "v1.0.5", text: "新增曲目「快樂頌 🎵」(Ode to Joy)" },
       { ver: "v1.0.4", text: "新增曲目「瑪麗有隻小羊 🐑」(Mary Had a Little Lamb)" },
       { ver: "v1.0.3", text: "新增曲目「鈴兒響叮噹 🎄」(Jingle Bells)" },
       { ver: "v1.0.2", text: "新增曲目「生日快樂 🎂」(Happy Birthday)" },
@@ -1353,9 +1396,11 @@ const games = [
     stars: "★★★★☆",
     url: "games/zombie-hunter/index.html",
     icon: "assets/images/zombie-aaa-icon.png",
+    covers: ["assets/images/zombie-aaa-icon.png", "assets/images/zombie-aaa-icon-v105.png"],
     collection: "zombie_hunter",
     painter: "zombie",
     changelog: [
+      { ver: "v1.0.5", text: "新增 ❄️ 冰霜殭屍 — 擊殺後全場緩速" },
       { ver: "v1.0.4", text: "新增 🌀 傳送殭屍 + 骷髏粒子選單特效" },
       { ver: "v1.0.3", text: "新增 👻 隱形殭屍 + 雷達掃描選單特效" },
       { ver: "v1.0.2", text: "新增 👾 巨型殭屍（需擊 3 次+3分）+ 血滴特效" },
@@ -1370,9 +1415,11 @@ const games = [
     stars: "★★★★☆",
     url: "games/cyber-tetris/index.html",
     icon: "assets/images/cyber-tetris-aaa-icon.png",
+    covers: ["assets/images/cyber-tetris-aaa-icon.png", "assets/images/cyber-tetris-aaa-icon-v105.png"],
     collection: "cyber_tetris",
     painter: "cyber",
     changelog: [
+      { ver: "v1.0.5", text: "新增 ⚡ 雷射方塊 — 落地清除整列" },
       { ver: "v1.0.0", text: "新增 Cyber Tetris，含特殊方塊與 Firebase 排行榜" },
     ]
   },
@@ -1389,6 +1436,11 @@ const FIREBASE_CONFIG = {
 
 const grid = document.getElementById("gameGrid");
 const leaderboards = document.getElementById("homeLeaderboards");
+
+function pickCover(game) {
+  const covers = game.covers && game.covers.length ? game.covers : [game.icon].filter(Boolean);
+  return covers[Math.floor(Math.random() * covers.length)];
+}
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -1502,9 +1554,10 @@ games.forEach((g, i) => {
   // art wrapper
   const artDiv = document.createElement("div");
   artDiv.className = "card-art";
-  if (g.icon) {
+  const cover = pickCover(g);
+  if (cover) {
     const img = document.createElement("img");
-    img.src = g.icon;
+    img.src = cover;
     img.alt = `${g.name} 3A 風格圖示`;
     artDiv.appendChild(img);
   }
@@ -1525,7 +1578,7 @@ games.forEach((g, i) => {
       ${g.changelog && g.changelog.length ? `
       <div class="card-changelog">
         <div class="card-changelog-title">更新紀錄</div>
-        ${g.changelog.slice(-3).reverse().map(c => `
+        ${g.changelog.slice(0, 3).map(c => `
           <div class="card-changelog-item">
             <span class="card-changelog-ver">${c.ver}</span>
             <span>${c.text}</span>
