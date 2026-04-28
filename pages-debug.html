@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>claude_game Pages Debug</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #07090f;
+      color: #eef7ff;
+    }
+    main {
+      width: min(720px, calc(100vw - 32px));
+      border: 1px solid rgba(0, 245, 255, 0.35);
+      border-radius: 8px;
+      padding: 28px;
+      background: linear-gradient(180deg, rgba(0,245,255,0.1), rgba(255,255,255,0.04));
+      box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+    }
+    h1 { margin: 0 0 14px; font-size: 28px; }
+    dl { display: grid; grid-template-columns: 150px 1fr; gap: 10px 16px; margin: 20px 0 0; }
+    dt { color: rgba(238,247,255,0.62); }
+    dd { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; }
+    a { color: #58f5ff; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>GitHub Pages Debug</h1>
+    <p>如果你看得到這頁，代表 GitHub Pages 已經部署到包含此 debug 檔案的 commit。</p>
+    <dl>
+      <dt>Expected version</dt>
+      <dd>v1.0.6</dd>
+      <dt>Debug commit</dt>
+      <dd>f797375</dd>
+      <dt>Created UTC</dt>
+      <dd>2026-04-28T15:20:43Z</dd>
+      <dt>Runtime loaded</dt>
+      <dd id="runtime">checking...</dd>
+      <dt>Home</dt>
+      <dd><a href="./index.html">index.html</a></dd>
+    </dl>
+  </main>
+  <script>
+    document.getElementById("runtime").textContent = new Date().toISOString();
+  </script>
+</body>
+</html>
