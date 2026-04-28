@@ -338,9 +338,10 @@
             <button class="song-btn" onclick="selectSong('JINGLE', this)">鈴兒響叮噹 🎄</button>
             <button class="song-btn" onclick="selectSong('MARY', this)">瑪麗有隻小羊 🐑</button>
             <button class="song-btn" onclick="selectSong('ODE', this)">快樂頌 🎵</button>
+            <button class="song-btn" onclick="selectSong('CANON', this)">卡農變奏 🎻</button>
             <button class="song-btn" onclick="selectSong('RANDOM', this)">隨機生成</button>
         </div>
-        <p style="font-size:11px;opacity:0.3;margin-top:-20px">Release v1.0.5</p>
+        <p style="font-size:11px;opacity:0.3;margin-top:-20px">Release v1.0.6</p>
         <div class="diff-container">
             <button class="btn btn-easy" onclick="initGame('EASY')">EASY</button>
             <button class="btn btn-normal" onclick="initGame('NORMAL')">NORMAL</button>
@@ -649,6 +650,7 @@
             else if (currentSong === 'JINGLE') { SONG_LENGTH = 28; generateJingleBells(); }
             else if (currentSong === 'MARY') { SONG_LENGTH = 22; generateMary(); }
             else if (currentSong === 'ODE') { SONG_LENGTH = 34; generateOdeToJoy(); }
+            else if (currentSong === 'CANON') { SONG_LENGTH = 36; generateCanonVariation(); }
             else if (currentSong === 'RANDOM') { SONG_LENGTH = 32; generateRandomTrack(); }
             else if (currentSong === '404') { SONG_LENGTH = 20; generateTrack404(); }
             setDifficulty(currentDifficulty); totalNotes = notes.length;
@@ -783,6 +785,59 @@
             }
             if (currentDifficulty === 'HARD') {
                 for (let beat = 0; beat < 72; beat += 2) scheduleKick(s + beat * b + audioStartTime);
+            }
+        }
+
+        function generateCanonVariation() {
+            const s = 2.0;
+            const phrase = [
+                { beat: 0, dur: 4, chord: [293.66, 440.00, 587.33], bass: 146.83 },
+                { beat: 4, dur: 4, chord: [220.00, 329.63, 440.00], bass: 110.00 },
+                { beat: 8, dur: 4, chord: [246.94, 369.99, 493.88], bass: 123.47 },
+                { beat: 12, dur: 4, chord: [185.00, 277.18, 369.99], bass: 92.50 },
+                { beat: 16, dur: 4, chord: [196.00, 293.66, 392.00], bass: 98.00 },
+                { beat: 20, dur: 4, chord: [146.83, 220.00, 293.66], bass: 73.42 },
+                { beat: 24, dur: 4, chord: [196.00, 293.66, 392.00], bass: 98.00 },
+                { beat: 28, dur: 4, chord: [220.00, 329.63, 440.00], bass: 110.00 }
+            ];
+            const lanes = [
+                [3, 2, 1, 0, 1, 2, 3, 1],
+                [2, 3, 1, 2, 0, 1, 2, 3],
+                [1, 0, 1, 2, 3, 2, 1, 0],
+                [0, 2, 3, 1, 2, 0, 1, 3]
+            ];
+            phrase.forEach((bar, i) => {
+                const t = s + bar.beat * 0.42;
+                scheduleBassNote(t + audioStartTime, bar.bass, 1.45);
+                scheduleChord(t + audioStartTime, bar.chord, 1.25, 0.1);
+                scheduleArpeggio(t + audioStartTime + 0.15, bar.chord, 1.45, 0.14);
+                if (currentDifficulty !== 'EASY') {
+                    notes.push(new Note(t, i % 4, 'hold', 0.72));
+                    notes.push(new Note(t, (i + 2) % 4, 'tap', 0));
+                } else {
+                    notes.push(new Note(t, i % 4, 'hold', 0.65));
+                }
+            });
+            lanes.forEach((run, pass) => {
+                const base = s + 1.0 + pass * 7.0;
+                const step = pass < 2 ? 0.28 : 0.22;
+                run.forEach((lane, idx) => {
+                    const t = base + idx * step;
+                    notes.push(new Note(t, lane, idx % 7 === 6 ? 'hold' : 'tap', idx % 7 === 6 ? 0.45 : 0));
+                    scheduleMelodyNote(t + audioStartTime, 293.66 * Math.pow(2, lane / 5), idx % 7 === 6 ? 0.45 : 0.18, 0.22);
+                    if (currentDifficulty === 'HARD' && idx % 2 === 0) {
+                        notes.push(new Note(t + 0.04, (lane + 2) % 4, 'tap', 0));
+                    }
+                });
+            });
+            const chordHits = [6.1, 6.52, 13.1, 13.52, 20.1, 20.52, 27.1, 27.52];
+            chordHits.forEach((t, i) => {
+                notes.push(new Note(s + t, i % 2 === 0 ? 0 : 1, 'tap', 0));
+                notes.push(new Note(s + t, i % 2 === 0 ? 3 : 2, 'tap', 0));
+                scheduleChord(s + t + audioStartTime, i % 2 === 0 ? [293.66, 440.00, 587.33] : [220.00, 329.63, 440.00], 0.35, 0.14);
+            });
+            if (currentDifficulty === 'HARD') {
+                for (let beat = 0; beat < 78; beat += 2) scheduleKick(s + beat * 0.21 + audioStartTime);
             }
         }
 

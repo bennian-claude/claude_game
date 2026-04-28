@@ -83,7 +83,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            width: 130px;
+            width: 150px;
         }
 
         .info-box {
@@ -343,7 +343,7 @@
 
 <div id="game-wrapper">
     <h1>CYBER TETRIS</h1>
-    <p style="margin:-8px 0 0;color:rgba(255,255,255,0.35);font-size:11px;letter-spacing:2px">Release v1.0.5</p>
+    <p style="margin:-8px 0 0;color:rgba(255,255,255,0.35);font-size:11px;letter-spacing:2px">Release v1.0.6</p>
 
     <div id="game-container">
         <div id="canvas-wrapper">
@@ -369,6 +369,8 @@
                 <div class="info-box">
                     <span>LEVEL</span>
                     <strong id="level">1</strong>
+                    <span style="margin-top:8px">CORE</span>
+                    <strong id="core-status" style="font-size:0.95rem">READY</strong>
                 </div>
             </div>
             <div>
@@ -376,7 +378,7 @@
                 <button id="restart-btn" class="btn btn-restart">重新系統</button>
                 <button id="home-btn" class="btn btn-home" type="button" onclick="window.location.href='../../index.html'">回主畫面</button>
                 <div id="leaderboard-panel">
-                    <h3>CYBER 排行榜 TOP 10</h3>
+                    <h3>排行榜 TOP 10</h3>
                     <div id="score-submit" class="hidden">
                         <input id="player-name" maxlength="20" placeholder="輸入名字 / 座號">
                         <button id="submit-score-btn" class="btn" type="button">送出分數</button>
@@ -417,7 +419,8 @@
         '#ffffff',
         '#444444',
         '#ff00ff',
-        '#ffee00'
+        '#ffee00',
+        '#8affff'
     ];
 
     const standardPieces = {
@@ -502,6 +505,17 @@
             ctx.fillRect(x + 0.12, y + 0.42, 0.76, 0.16);
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(x + 0.28, y + 0.28, 0.44, 0.44);
+        } else if (value === 13) {
+            ctx.fillStyle = 'rgba(138,255,255,0.55)';
+            ctx.beginPath();
+            ctx.arc(x + 0.5, y + 0.5, 0.32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 0.04;
+            ctx.beginPath();
+            ctx.moveTo(x + 0.5, y + 0.22); ctx.lineTo(x + 0.5, y + 0.78);
+            ctx.moveTo(x + 0.22, y + 0.5); ctx.lineTo(x + 0.78, y + 0.5);
+            ctx.stroke();
         } else {
             ctx.fillStyle = color;
             ctx.globalAlpha = isGhost ? 0.1 : 0.4;
@@ -526,10 +540,11 @@
     function generatePiece() {
         if (Math.random() < 0.13) {
             const rand = Math.random();
-            if (rand < 0.20) return { matrix: [[8]], type: 'bomb' };
-            if (rand < 0.40) return { matrix: [[9]], type: 'nano' };
-            if (rand < 0.60) return { matrix: [[10,10],[10,10]], type: 'heavy' };
-            if (rand < 0.80) return { matrix: [[12,12,12,12]], type: 'laser' };
+            if (rand < 0.17) return { matrix: [[8]], type: 'bomb' };
+            if (rand < 0.34) return { matrix: [[9]], type: 'nano' };
+            if (rand < 0.51) return { matrix: [[10,10],[10,10]], type: 'heavy' };
+            if (rand < 0.68) return { matrix: [[12,12,12,12]], type: 'laser' };
+            if (rand < 0.85) return { matrix: [[13]], type: 'timecore' };
 
             let normal = generateNormalMatrix();
             let quantumMatrix = normal.map(row => row.map(v => v !== 0 ? 11 : 0));
@@ -575,6 +590,7 @@
 
     function merge(board, p) {
         let isBomb = false;
+        let isTimeCore = false;
         const laserRows = new Set();
         p.matrix.forEach((row, y) => {
             row.forEach((value, x) => {
@@ -586,6 +602,7 @@
                         if (value === 8) isBomb = true;
                         if (value === 11) board[by][bx] = Math.floor(Math.random() * 7) + 1;
                         if (value === 12) laserRows.add(by);
+                        if (value === 13) isTimeCore = true;
                     }
                 }
             });
@@ -616,6 +633,12 @@
             lasers.push({y: row, life: 1.2});
             player.score += 150;
         });
+        if (isTimeCore) {
+            slowMoTimer = 8000;
+            player.score += 120;
+            lasers.push({y: Math.max(0, Math.min(19, p.pos.y)), life: 0.7});
+            triggerScreenShake();
+        }
     }
 
     function rotate(matrix, dir) {
@@ -831,6 +854,7 @@
 
     let dropCounter = 0;
     let quantumTimer = 0;
+    let slowMoTimer = 0;
     let lastTime = 0;
     let gameState = 'START';
     let reqId;
@@ -848,6 +872,16 @@
 
         let currentDropInterval = Math.max(100, 1000 - (player.level - 1) * 100);
         if (isDanger && player.pos.y < 4) currentDropInterval *= 1.5;
+        if (slowMoTimer > 0) {
+            slowMoTimer = Math.max(0, slowMoTimer - deltaTime);
+            currentDropInterval *= 1.7;
+        }
+        const coreStatus = document.getElementById('core-status');
+        if (coreStatus) {
+            coreStatus.innerText = slowMoTimer > 0 ? `${Math.ceil(slowMoTimer / 1000)}s` : 'READY';
+            coreStatus.style.color = slowMoTimer > 0 ? '#8affff' : '#fff';
+            coreStatus.style.textShadow = slowMoTimer > 0 ? '0 0 12px #8affff' : '';
+        }
 
         dropCounter += deltaTime;
         if (dropCounter > currentDropInterval) {
@@ -897,7 +931,7 @@
         if (gameState === 'START' || gameState === 'GAMEOVER') {
             arena.forEach(row => row.fill(0));
             player.score = 0; player.lines = 0; player.level = 1;
-            player.nextObj = null; particles = []; lasers = [];
+            player.nextObj = null; particles = []; lasers = []; slowMoTimer = 0;
             playerReset();
             updateScore();
             gameState = 'PLAYING';

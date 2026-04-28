@@ -135,7 +135,7 @@
 
 <div id="startScreen" class="overlay">
   <h1>🎈 射氣球大作戰 🎈</h1>
-  <p style="font-size:12px;opacity:0.45;margin-bottom:4px">Release v1.0.5</p>
+  <p style="font-size:12px;opacity:0.45;margin-bottom:4px">Release v1.0.6</p>
   <p>20 秒內射破氣球並收集掉落物拿最高分！</p>
   <div class="rules">
     <span>🎈 氣球 +1</span>
@@ -145,6 +145,7 @@
     <span>❄️ 冰晶 → 凍結 5 秒</span>
     <span>🎯 三叉針 → 一次爆 3 顆</span>
     <span>⚡ 加速針 → 命中範圍放大 5 秒</span>
+    <span>⏳ 時間沙漏 → 額外 +3 秒</span>
   </div>
   <p style="margin-top:14px;opacity:0.85">無敵模式：分數加倍，炸彈免疫還給 +5！</p>
   <button id="startBtn">開始遊戲</button>
@@ -257,6 +258,7 @@
     magnet() { [300, 350, 400, 350].forEach((f, i) => playTone({ type: 'sine', from: f, to: f * 1.3, dur: 0.25, vol: 0.18, delay: i * 0.08 })); },
     shield() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => playTone({ type: 'sine', from: f, to: f, dur: 0.2, vol: 0.15, delay: i * 0.06 })); },
     speedUp() { [400, 600, 900, 1200].forEach((f, i) => playTone({ type: 'square', from: f, to: f * 1.5, dur: 0.1, vol: 0.2, delay: i * 0.05 })); },
+    timeWarp() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => playTone({ type: 'triangle', from: f, to: f * 1.12, dur: 0.16, vol: 0.18, delay: i * 0.055 })); },
     gameover() { playTone({ type: 'triangle', from: 300, to: 100, dur: 0.8, vol: 0.3 }); },
     bgmTick(high) {
       const f = high ? 987.77 : 783.99; // B5 / G5
@@ -279,6 +281,7 @@
     magnetFrames: 0,
     shieldFrames: 0,
     speedUpFrames: 0,
+    hourglassFrames: 0,
     spawnCounter: 0,
     mouse: { x: W / 2, y: H / 2 },
     shakeFrames: 0,
@@ -314,6 +317,7 @@
     else if (type === 'magnet') state.items.push({ ...base, type, r: 22, vy: -2.5, g: 0.14, vx: (Math.random() - 0.5) * 1.8, angle: 0 });
     else if (type === 'shield') state.items.push({ ...base, type, r: 22, vy: -2.8, g: 0.16, vx: (Math.random() - 0.5) * 1.6, angle: 0 });
     else if (type === 'speedUp') state.items.push({ ...base, type, r: 22, vy: -3.2, g: 0.17, vx: (Math.random() - 0.5) * 2, angle: 0 });
+    else if (type === 'hourglass') state.items.push({ ...base, type, r: 22, vy: -2.6, g: 0.13, vx: (Math.random() - 0.5) * 1.7, angle: 0 });
   }
   function maybeDropFromBalloon(x, y) {
     const r = Math.random();
@@ -323,8 +327,9 @@
     else if (r < 0.80) spawnItem('freeze', x, y);
     else if (r < 0.90) spawnItem('multiShot', x, y);
     else if (r < 0.96) spawnItem('magnet', x, y);
-    else if (r < 0.985) spawnItem('shield', x, y);
-    else spawnItem('speedUp', x, y);
+    else if (r < 0.975) spawnItem('shield', x, y);
+    else if (r < 0.992) spawnItem('speedUp', x, y);
+    else spawnItem('hourglass', x, y);
   }
   function spawnParticles(x, y, color) {
     for (let i = 0; i < 15; i++) {
@@ -566,6 +571,24 @@
     ctx.fillText('⚡', 0, 1);
     ctx.restore();
   }
+  function drawHourglass(it) {
+    ctx.save();
+    ctx.translate(it.x, it.y);
+    it.angle += 0.045;
+    ctx.rotate(Math.sin(it.angle) * 0.18);
+    const r = it.r;
+    const pulse = 0.65 + 0.35 * Math.sin(Date.now() * 0.008);
+    ctx.shadowBlur = 22 * pulse; ctx.shadowColor = '#d7b7ff';
+    ctx.fillStyle = 'rgba(215,183,255,0.18)';
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#d7b7ff'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(0, 0, r - 2, 0, Math.PI * 2); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.font = `${r * 1.35}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('⏳', 0, 1);
+    ctx.restore();
+  }
   function drawShield(it) {
     ctx.save();
     ctx.translate(it.x, it.y);
@@ -716,6 +739,12 @@
       spawnParticles(it.x, it.y, '#ffee00');
       spawnParticles(it.x, it.y, '#ff8800');
       sfx.speedUp();
+    } else if (it.type === 'hourglass') {
+      state.timeLeft = Math.min(30, state.timeLeft + 3);
+      state.hourglassFrames = 120;
+      spawnParticles(it.x, it.y, '#d7b7ff');
+      spawnParticles(it.x, it.y, '#ffffff');
+      sfx.timeWarp();
     } else if (it.type === 'shield') {
       state.shieldFrames = 300;
       spawnParticles(it.x, it.y, '#00ddff');
@@ -802,6 +831,18 @@
     } else if (state.freezeFrames <= 0 && state.multiShotFrames <= 0 && state.magnetFrames <= 0 && state.shieldFrames <= 0) {
       document.getElementById('freezeBar').style.display = 'none';
     }
+    if (state.hourglassFrames > 0) {
+      state.hourglassFrames--;
+      const bar = document.getElementById('freezeBar');
+      if (state.freezeFrames <= 0 && state.multiShotFrames <= 0 && state.magnetFrames <= 0 && state.shieldFrames <= 0 && state.speedUpFrames <= 0) {
+        bar.style.display = 'block';
+        bar.style.background = 'linear-gradient(90deg,#d7b7ff,#ffffff)';
+        bar.style.opacity = (state.frame % 20 < 10) ? '1' : '0.75';
+        bar.textContent = `⏳ 時間 +3 秒`;
+      }
+    } else if (state.freezeFrames <= 0 && state.multiShotFrames <= 0 && state.magnetFrames <= 0 && state.shieldFrames <= 0 && state.speedUpFrames <= 0) {
+      document.getElementById('freezeBar').style.display = 'none';
+    }
 
     // balloons
     for (const b of state.balloons) {
@@ -874,6 +915,7 @@
       else if (it.type === 'magnet') drawMagnet(it);
       else if (it.type === 'shield') drawShield(it);
       else if (it.type === 'speedUp') drawSpeedUp(it);
+      else if (it.type === 'hourglass') drawHourglass(it);
     }
     drawParticles();
     drawCursor();
@@ -920,6 +962,7 @@
     state.magnetFrames = 0;
     state.shieldFrames = 0;
     state.speedUpFrames = 0;
+    state.hourglassFrames = 0;
     state.spawnCounter = 0;
     state.shakeFrames = 0;
     state.running = true;
