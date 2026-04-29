@@ -343,7 +343,7 @@
 
 <div id="game-wrapper">
     <h1>CYBER TETRIS</h1>
-    <p style="margin:-8px 0 0;color:rgba(255,255,255,0.35);font-size:11px;letter-spacing:2px">Release v1.0.6</p>
+    <p style="margin:-8px 0 0;color:rgba(255,255,255,0.35);font-size:11px;letter-spacing:2px">Release v1.0.7</p>
 
     <div id="game-container">
         <div id="canvas-wrapper">
@@ -420,7 +420,8 @@
         '#444444',
         '#ff00ff',
         '#ffee00',
-        '#8affff'
+        '#8affff',
+        '#ff9f1c'
     ];
 
     const standardPieces = {
@@ -435,6 +436,7 @@
 
     let particles = [];
     let lasers = [];
+    let drillBeams = [];
 
     function createParticles(x, y, colorStr, amount = 10) {
         for(let i=0; i<amount; i++) {
@@ -456,6 +458,14 @@
             context.fillRect(0, laser.y + 0.5 - laser.life/2, 12, laser.life);
             context.fillStyle = `rgba(255, 255, 255, ${laser.life})`;
             context.fillRect(0, laser.y + 0.4, 12, 0.2);
+        });
+        drillBeams.forEach((beam, index) => {
+            beam.life -= 0.045;
+            if(beam.life <= 0) { drillBeams.splice(index, 1); return; }
+            context.fillStyle = `rgba(255, 159, 28, ${beam.life * 0.8})`;
+            context.fillRect(beam.x + 0.5 - beam.life/2, 0, beam.life, 20);
+            context.fillStyle = `rgba(255, 255, 255, ${beam.life})`;
+            context.fillRect(beam.x + 0.4, 0, 0.2, 20);
         });
 
         particles.forEach((p, index) => {
@@ -516,6 +526,22 @@
             ctx.moveTo(x + 0.5, y + 0.22); ctx.lineTo(x + 0.5, y + 0.78);
             ctx.moveTo(x + 0.22, y + 0.5); ctx.lineTo(x + 0.78, y + 0.5);
             ctx.stroke();
+        } else if (value === 14) {
+            ctx.fillStyle = '#ff9f1c';
+            ctx.beginPath();
+            ctx.moveTo(x + 0.5, y + 0.16);
+            ctx.lineTo(x + 0.82, y + 0.74);
+            ctx.lineTo(x + 0.18, y + 0.74);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 0.04;
+            ctx.beginPath();
+            ctx.moveTo(x + 0.5, y + 0.22);
+            ctx.lineTo(x + 0.5, y + 0.72);
+            ctx.moveTo(x + 0.32, y + 0.48);
+            ctx.lineTo(x + 0.68, y + 0.48);
+            ctx.stroke();
         } else {
             ctx.fillStyle = color;
             ctx.globalAlpha = isGhost ? 0.1 : 0.4;
@@ -544,7 +570,8 @@
             if (rand < 0.34) return { matrix: [[9]], type: 'nano' };
             if (rand < 0.51) return { matrix: [[10,10],[10,10]], type: 'heavy' };
             if (rand < 0.68) return { matrix: [[12,12,12,12]], type: 'laser' };
-            if (rand < 0.85) return { matrix: [[13]], type: 'timecore' };
+            if (rand < 0.82) return { matrix: [[13]], type: 'timecore' };
+            if (rand < 0.94) return { matrix: [[14],[14],[14]], type: 'drill' };
 
             let normal = generateNormalMatrix();
             let quantumMatrix = normal.map(row => row.map(v => v !== 0 ? 11 : 0));
@@ -592,6 +619,7 @@
         let isBomb = false;
         let isTimeCore = false;
         const laserRows = new Set();
+        const drillCols = new Set();
         p.matrix.forEach((row, y) => {
             row.forEach((value, x) => {
                 if (value !== 0) {
@@ -603,6 +631,7 @@
                         if (value === 11) board[by][bx] = Math.floor(Math.random() * 7) + 1;
                         if (value === 12) laserRows.add(by);
                         if (value === 13) isTimeCore = true;
+                        if (value === 14) drillCols.add(bx);
                     }
                 }
             });
@@ -632,6 +661,16 @@
             }
             lasers.push({y: row, life: 1.2});
             player.score += 150;
+        });
+        drillCols.forEach(col => {
+            if (col < 0 || col >= board[0].length) return;
+            for (let y = 0; y < board.length; y++) {
+                if (board[y][col] !== 0) createParticles(col, y, '#ff9f1c', 7);
+                board[y][col] = 0;
+            }
+            drillBeams.push({x: col, life: 1.3});
+            player.score += 180;
+            triggerScreenShake();
         });
         if (isTimeCore) {
             slowMoTimer = 8000;
@@ -931,7 +970,7 @@
         if (gameState === 'START' || gameState === 'GAMEOVER') {
             arena.forEach(row => row.fill(0));
             player.score = 0; player.lines = 0; player.level = 1;
-            player.nextObj = null; particles = []; lasers = []; slowMoTimer = 0;
+            player.nextObj = null; particles = []; lasers = []; drillBeams = []; slowMoTimer = 0;
             playerReset();
             updateScore();
             gameState = 'PLAYING';

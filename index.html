@@ -205,12 +205,30 @@
       width: min(460px, 100%);
       position: relative;
       z-index: 1;
+      overflow: hidden;
       border: 1px solid rgba(255,255,255,0.16);
       border-radius: 8px;
       background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.035));
       box-shadow: 0 30px 90px rgba(0,0,0,0.48);
       padding: 2rem;
       text-align: center;
+    }
+
+    .entry-card::after {
+      content: "";
+      position: absolute;
+      inset: -45% -20%;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(105deg, transparent 0 18px, rgba(0,245,255,0.26) 19px 20px, transparent 21px 36px),
+        repeating-linear-gradient(75deg, transparent 0 26px, rgba(255,176,0,0.18) 27px 28px, transparent 29px 48px);
+      opacity: 0.22;
+      mix-blend-mode: screen;
+      animation: photonRain 5.5s linear infinite;
+    }
+
+    @keyframes photonRain {
+      to { transform: translate3d(0, 34%, 0); }
     }
 
     .entry-card strong {
@@ -828,7 +846,7 @@
   <main class="game-grid" id="gameGrid"></main>
 </div>
 
-<footer>GAME HUB &nbsp;·&nbsp; <span>班級互動平台</span> &nbsp;·&nbsp; Built with Claude Code &nbsp;·&nbsp; <span>Release v1.0.6</span></footer>
+<footer>GAME HUB &nbsp;·&nbsp; <span>班級互動平台</span> &nbsp;·&nbsp; Built with Claude Code &nbsp;·&nbsp; <span>Release v1.0.7</span></footer>
 
 <!-- ══════════════════ STARFIELD ══════════════════ -->
 <script>
@@ -1379,10 +1397,11 @@ const games = [
     stars: "★★★★☆",
     url: "games/balloon-shooter/index.html",
     icon: "assets/images/balloon-aaa-icon.png",
-    covers: ["assets/images/balloon-aaa-icon.png", "assets/images/balloon-aaa-icon-v105.png", "assets/images/balloon-aaa-icon-v106.png"],
+    covers: ["assets/images/balloon-aaa-icon.png", "assets/images/balloon-aaa-icon-v105.png", "assets/images/balloon-aaa-icon-v106.png", "assets/images/balloon-aaa-icon-v107.png"],
     collection: "balloon_shooter",
     painter: "balloon",
     changelog: [
+      { ver: "v1.0.7", text: "新增 🌈 彩虹爆破 — 清空畫面氣球" },
       { ver: "v1.0.6", text: "新增 ⏳ 時間沙漏 — 額外 +3 秒" },
       { ver: "v1.0.5", text: "新增 ⚡ 加速針 — 5 秒內命中範圍放大" },
       { ver: "v1.0.4", text: "新增 🛡️ 護盾道具 — 5 秒內炸彈無效" },
@@ -1399,10 +1418,11 @@ const games = [
     stars: "★★★★★",
     url: "games/rhythm-game/index.html",
     icon: "assets/images/rhythm-aaa-icon.png",
-    covers: ["assets/images/rhythm-aaa-icon.png", "assets/images/rhythm-aaa-icon-v105.png", "assets/images/rhythm-aaa-icon-v106.png"],
+    covers: ["assets/images/rhythm-aaa-icon.png", "assets/images/rhythm-aaa-icon-v105.png", "assets/images/rhythm-aaa-icon-v106.png", "assets/images/rhythm-aaa-icon-v107.png"],
     collection: "rhythm_game",
     painter: "rhythm",
     changelog: [
+      { ver: "v1.0.7", text: "新增曲目「土耳其進行曲 🥁」— 快速連音、雙鍵和弦與變速段落" },
       { ver: "v1.0.6", text: "新增曲目「卡農變奏 🎻」— 連音、和弦與節奏變化" },
       { ver: "v1.0.5", text: "新增曲目「快樂頌 🎵」(Ode to Joy)" },
       { ver: "v1.0.4", text: "新增曲目「瑪麗有隻小羊 🐑」(Mary Had a Little Lamb)" },
@@ -1419,10 +1439,11 @@ const games = [
     stars: "★★★★☆",
     url: "games/zombie-hunter/index.html",
     icon: "assets/images/zombie-aaa-icon.png",
-    covers: ["assets/images/zombie-aaa-icon.png", "assets/images/zombie-aaa-icon-v105.png", "assets/images/zombie-aaa-icon-v106.png"],
+    covers: ["assets/images/zombie-aaa-icon.png", "assets/images/zombie-aaa-icon-v105.png", "assets/images/zombie-aaa-icon-v106.png", "assets/images/zombie-aaa-icon-v107.png"],
     collection: "zombie_hunter",
     painter: "zombie",
     changelog: [
+      { ver: "v1.0.7", text: "新增 🧬 分裂殭屍 — 擊殺後產生迷你殭屍" },
       { ver: "v1.0.6", text: "新增 ☣️ 毒霧殭屍 — 擊殺後玩家衝刺" },
       { ver: "v1.0.5", text: "新增 ❄️ 冰霜殭屍 — 擊殺後全場緩速" },
       { ver: "v1.0.4", text: "新增 🌀 傳送殭屍 + 骷髏粒子選單特效" },
@@ -1439,10 +1460,11 @@ const games = [
     stars: "★★★★☆",
     url: "games/cyber-tetris/index.html",
     icon: "assets/images/cyber-tetris-aaa-icon.png",
-    covers: ["assets/images/cyber-tetris-aaa-icon.png", "assets/images/cyber-tetris-aaa-icon-v105.png", "assets/images/cyber-tetris-aaa-icon-v106.png"],
+    covers: ["assets/images/cyber-tetris-aaa-icon.png", "assets/images/cyber-tetris-aaa-icon-v105.png", "assets/images/cyber-tetris-aaa-icon-v106.png", "assets/images/cyber-tetris-aaa-icon-v107.png"],
     collection: "cyber_tetris",
     painter: "cyber",
     changelog: [
+      { ver: "v1.0.7", text: "新增 🛠️ 鑽頭方塊 — 落地清除整欄" },
       { ver: "v1.0.6", text: "新增 🕒 時間核心 — 8 秒慢速下落" },
       { ver: "v1.0.5", text: "新增 ⚡ 雷射方塊 — 落地清除整列" },
       { ver: "v1.0.0", text: "新增 Cyber Tetris，含特殊方塊與 Firebase 排行榜" },

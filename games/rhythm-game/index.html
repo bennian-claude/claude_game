@@ -339,9 +339,10 @@
             <button class="song-btn" onclick="selectSong('MARY', this)">瑪麗有隻小羊 🐑</button>
             <button class="song-btn" onclick="selectSong('ODE', this)">快樂頌 🎵</button>
             <button class="song-btn" onclick="selectSong('CANON', this)">卡農變奏 🎻</button>
+            <button class="song-btn" onclick="selectSong('TURKISH', this)">土耳其進行曲 🥁</button>
             <button class="song-btn" onclick="selectSong('RANDOM', this)">隨機生成</button>
         </div>
-        <p style="font-size:11px;opacity:0.3;margin-top:-20px">Release v1.0.6</p>
+        <p style="font-size:11px;opacity:0.3;margin-top:-20px">Release v1.0.7</p>
         <div class="diff-container">
             <button class="btn btn-easy" onclick="initGame('EASY')">EASY</button>
             <button class="btn btn-normal" onclick="initGame('NORMAL')">NORMAL</button>
@@ -651,6 +652,7 @@
             else if (currentSong === 'MARY') { SONG_LENGTH = 22; generateMary(); }
             else if (currentSong === 'ODE') { SONG_LENGTH = 34; generateOdeToJoy(); }
             else if (currentSong === 'CANON') { SONG_LENGTH = 36; generateCanonVariation(); }
+            else if (currentSong === 'TURKISH') { SONG_LENGTH = 35; generateTurkishMarch(); }
             else if (currentSong === 'RANDOM') { SONG_LENGTH = 32; generateRandomTrack(); }
             else if (currentSong === '404') { SONG_LENGTH = 20; generateTrack404(); }
             setDifficulty(currentDifficulty); totalNotes = notes.length;
@@ -838,6 +840,51 @@
             });
             if (currentDifficulty === 'HARD') {
                 for (let beat = 0; beat < 78; beat += 2) scheduleKick(s + beat * 0.21 + audioStartTime);
+            }
+        }
+
+        function generateTurkishMarch() {
+            const s = 2.0;
+            const b = 0.24;
+            const motif = [
+                [0, 0, 329.63], [1, 1, 349.23], [2, 2, 392.00], [3, 3, 440.00],
+                [4, 2, 392.00], [5, 1, 349.23], [6, 0, 329.63], [7, 1, 349.23],
+                [8, 2, 392.00], [9, 3, 493.88], [10, 2, 440.00], [11, 1, 392.00],
+                [12, 0, 349.23], [13, 1, 392.00], [14, 2, 440.00], [15, 3, 523.25]
+            ];
+            const bass = [
+                [0, 130.81], [4, 196.00], [8, 146.83], [12, 220.00],
+                [16, 130.81], [20, 196.00], [24, 146.83], [28, 261.63]
+            ];
+            for (let pass = 0; pass < 4; pass++) {
+                const offset = s + pass * 7.2;
+                const step = pass < 2 ? b : 0.19;
+                motif.forEach(([beat, lane, freq], idx) => {
+                    const t = offset + beat * step;
+                    const isHold = idx % 8 === 7;
+                    notes.push(new Note(t, lane, isHold ? 'hold' : 'tap', isHold ? 0.42 : 0));
+                    scheduleMelodyNote(t + audioStartTime, freq * (pass >= 2 ? 1.12 : 1), isHold ? 0.42 : 0.14, pass >= 2 ? 0.24 : 0.2);
+                    if (currentDifficulty === 'HARD' && idx % 4 === 2) {
+                        notes.push(new Note(t + 0.05, (lane + 2) % 4, 'tap', 0));
+                    }
+                });
+                bass.forEach(([beat, freq], idx) => {
+                    const t = offset + beat * step;
+                    scheduleBassNote(t + audioStartTime, freq, step * 3.2);
+                    if (idx % 2 === 0) {
+                        scheduleChord(t + audioStartTime, [freq * 2, freq * 2.5, freq * 3], step * 3, 0.08);
+                    }
+                });
+                const chordTimes = [3.85, 4.35, 5.28, 6.0];
+                chordTimes.forEach((local, i) => {
+                    const t = offset + local;
+                    notes.push(new Note(t, i % 2 === 0 ? 0 : 1, 'tap', 0));
+                    notes.push(new Note(t, i % 2 === 0 ? 3 : 2, 'tap', 0));
+                    scheduleChord(t + audioStartTime, i % 2 === 0 ? [329.63, 392.00, 523.25] : [293.66, 369.99, 493.88], 0.28, 0.13);
+                });
+            }
+            for (let t = s; t < s + 30; t += 0.48) {
+                scheduleKick(t + audioStartTime);
             }
         }
 
