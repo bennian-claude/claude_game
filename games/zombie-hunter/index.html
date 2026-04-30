@@ -75,10 +75,14 @@
 </div>
 <div id="endActions">
   <button type="button" onclick="startGame()">再玩一次</button>
-  <button class="home-link-btn" type="button" onclick="window.location.href='../../index.html'">回主畫面</button>
+  <button class="home-link-btn" type="button" onclick="goHome()">回主畫面</button>
 </div>
 
 <script>
+function goHome() {
+  window.location.href = '../../index.html?skipIntro=1';
+}
+
 // ═══════════════════════════════════════════════════════
 //  SETUP
 // ═══════════════════════════════════════════════════════
@@ -962,7 +966,7 @@ requestAnimationFrame(frame);
               background:rgba(255,255,255,0.07); color:#aaa; border:1px solid #555;
               border-radius:5px; cursor:pointer; font-weight:bold">跳過</button>
     </div>
-    <button class="home-link-btn" type="button" onclick="window.location.href='../../index.html'"
+    <button class="home-link-btn" type="button" onclick="goHome()"
       style="margin-top:10px; width:100%">回主畫面</button>
   </div>
   <div id="lbList" style="display:none">
@@ -973,7 +977,7 @@ requestAnimationFrame(frame);
       style="margin-top:12px; width:100%; padding:10px; background:rgba(0,255,255,0.1);
              border:1px solid #0ff; color:#0ff; font-weight:bold; cursor:pointer;
              border-radius:8px; font-family:Orbitron,sans-serif; font-size:0.9rem">關閉</button>
-    <button class="home-link-btn" type="button" onclick="window.location.href='../../index.html'"
+    <button class="home-link-btn" type="button" onclick="goHome()"
       style="margin-top:10px; width:100%">回主畫面</button>
   </div>
 </div>

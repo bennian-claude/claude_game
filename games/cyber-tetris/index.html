@@ -435,7 +435,7 @@
             <div>
                 <button id="pause-btn" class="btn">開始遊戲</button>
                 <button id="restart-btn" class="btn btn-restart">重新系統</button>
-                <button id="home-btn" class="btn btn-home" type="button" onclick="window.location.href='../../index.html'">回主畫面</button>
+                <button id="home-btn" class="btn btn-home" type="button" onclick="goHome()">回主畫面</button>
                 <div id="leaderboard-panel">
                     <h3>排行榜 TOP 10</h3>
                     <div id="score-submit" class="hidden">
@@ -457,6 +457,10 @@
 </div>
 
 <script>
+    function goHome() {
+        window.location.href = '../../index.html?skipIntro=1';
+    }
+
     const canvas = document.getElementById('tetris');
     const context = canvas.getContext('2d');
     const nextCanvas = document.getElementById('next-piece-canvas');

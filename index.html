@@ -653,6 +653,10 @@
       transform: scale(1.01);
       transition: transform 0.45s ease, opacity 0.45s ease;
     }
+    .card-art img.is-swapping,
+    .hero-panel img.is-swapping {
+      opacity: 0.18;
+    }
     .card-art canvas {
       position: absolute;
       right: 0.75rem; bottom: 0.75rem;
@@ -839,7 +843,7 @@
       <p class="hero-sub">四款即開即玩的課堂競技遊戲，現在升級成更像主機遊戲選單的入口。選一張卡片，<span>直接開戰</span>。</p>
     </div>
     <div class="hero-panel" aria-hidden="true">
-      <img src="assets/images/zombie-aaa-icon.png" alt="">
+      <img id="heroCover" src="assets/images/zombie-aaa-icon.png" alt="">
       <div class="hero-panel-copy">
         <div>
           <strong>AAA Mode</strong>
@@ -1506,10 +1510,40 @@ const FIREBASE_CONFIG = {
 
 const grid = document.getElementById("gameGrid");
 const leaderboards = document.getElementById("homeLeaderboards");
+const heroCover = document.getElementById("heroCover");
 
 function pickCover(game) {
   const covers = game.covers && game.covers.length ? game.covers : [game.icon].filter(Boolean);
   return covers[Math.floor(Math.random() * covers.length)];
+}
+
+function pickDifferentCover(game, currentSrc) {
+  const covers = game.covers && game.covers.length ? game.covers : [game.icon].filter(Boolean);
+  if (!covers.length) return "";
+  const currentPath = currentSrc ? new URL(currentSrc, window.location.href).pathname : "";
+  const candidates = covers.filter(cover => new URL(cover, window.location.href).pathname !== currentPath);
+  return (candidates.length ? candidates : covers)[Math.floor(Math.random() * (candidates.length || covers.length))];
+}
+
+function swapImage(img, nextSrc) {
+  if (!img || !nextSrc || img.getAttribute("src") === nextSrc) return;
+  img.classList.add("is-swapping");
+  setTimeout(() => {
+    img.src = nextSrc;
+    img.addEventListener("load", () => img.classList.remove("is-swapping"), { once: true });
+  }, 180);
+}
+
+function startRandomCoverRotation(items, interval = 5200) {
+  if (!items.length) return;
+  items.forEach(({ img, game }, index) => {
+    setTimeout(() => {
+      swapImage(img, pickDifferentCover(game, img.currentSrc || img.src));
+    }, 500 + index * 180);
+    setInterval(() => {
+      swapImage(img, pickDifferentCover(game, img.currentSrc || img.src));
+    }, interval + index * 650);
+  });
 }
 
 function escapeHtml(value) {
@@ -1615,6 +1649,8 @@ async function loadHomeLeaderboards() {
   }));
 }
 
+const coverRotators = [];
+
 games.forEach((g, i) => {
   const card = document.createElement("a");
   card.className = "game-card";
@@ -1630,6 +1666,7 @@ games.forEach((g, i) => {
     img.src = cover;
     img.alt = `${g.name} 3A 風格圖示`;
     artDiv.appendChild(img);
+    coverRotators.push({ img, game: g });
   }
   const cvs = document.createElement("canvas");
   cvs.setAttribute("aria-label", `${g.name} 動態預覽`);
@@ -1672,6 +1709,12 @@ games.forEach((g, i) => {
   });
 });
 
+const heroGame = { covers: games.flatMap(game => game.covers || [game.icon].filter(Boolean)) };
+if (heroCover) {
+  swapImage(heroCover, pickDifferentCover(heroGame, heroCover.currentSrc || heroCover.src));
+  coverRotators.push({ img: heroCover, game: heroGame });
+}
+startRandomCoverRotation(coverRotators);
 loadHomeLeaderboards();
 </script>
 
@@ -1691,6 +1734,7 @@ loadHomeLeaderboards();
   bgm.volume = bgmVolume;
   let introStarted = false;
   let hubEntered = false;
+  const skipIntroOnLoad = new URLSearchParams(window.location.search).has("skipIntro");
 
   async function start() {
     try {
@@ -1753,7 +1797,12 @@ loadHomeLeaderboards();
 
   async function enterHubDirectly() {
     hubEntered = true;
+    introStarted = true;
     entryGate.classList.add("is-hidden");
+    introVideoScreen.classList.remove("is-active");
+    zombieIntroVideo.pause();
+    zombieIntroVideo.currentTime = 0;
+    stop();
   }
 
   enterHubBtn.addEventListener("click", enterHubFromGate);
@@ -1773,6 +1822,10 @@ loadHomeLeaderboards();
   document.addEventListener("visibilitychange", () => {
     if (document.hidden && !bgm.paused) stop();
   });
+
+  if (skipIntroOnLoad) {
+    enterHubDirectly();
+  }
 })();
 </script>
 

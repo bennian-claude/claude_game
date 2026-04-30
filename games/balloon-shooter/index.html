@@ -170,10 +170,14 @@
     <div id="leaderboardList"></div>
   </div>
   <button id="restartBtn" style="margin-top:16px">再玩一次</button>
-  <button id="homeBtn" style="margin-top:10px" onclick="window.location.href='../../index.html'">回主畫面</button>
+  <button id="homeBtn" style="margin-top:10px" onclick="goHome()">回主畫面</button>
 </div>
 
 <script>
+function goHome() {
+  window.location.href = '../../index.html?skipIntro=1';
+}
+
 // ---- Intro Video ----
 (function() {
   const introScreen = document.getElementById('introScreen');
