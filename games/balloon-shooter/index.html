@@ -135,7 +135,7 @@
 
 <div id="startScreen" class="overlay">
   <h1>🎈 射氣球大作戰 🎈</h1>
-  <p style="font-size:12px;opacity:0.45;margin-bottom:4px">Release v1.0.7</p>
+  <p style="font-size:12px;opacity:0.45;margin-bottom:4px">Release v1.0.8</p>
   <p>20 秒內射破氣球並收集掉落物拿最高分！</p>
   <div class="rules">
     <span>🎈 氣球 +1</span>
@@ -147,6 +147,7 @@
     <span>⚡ 加速針 → 命中範圍放大 5 秒</span>
     <span>⏳ 時間沙漏 → 額外 +3 秒</span>
     <span>🌈 彩虹爆破 → 清空畫面氣球</span>
+    <span>🔗 連鎖閃電 → 連爆最近 5 顆</span>
   </div>
   <p style="margin-top:14px;opacity:0.85">無敵模式：分數加倍，炸彈免疫還給 +5！</p>
   <button id="startBtn">開始遊戲</button>
@@ -261,6 +262,7 @@
     speedUp() { [400, 600, 900, 1200].forEach((f, i) => playTone({ type: 'square', from: f, to: f * 1.5, dur: 0.1, vol: 0.2, delay: i * 0.05 })); },
     timeWarp() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => playTone({ type: 'triangle', from: f, to: f * 1.12, dur: 0.16, vol: 0.18, delay: i * 0.055 })); },
     rainbow() { [523.25, 659.25, 783.99, 987.77, 1318.51].forEach((f, i) => playTone({ type: 'sine', from: f, to: f * 1.18, dur: 0.18, vol: 0.2, delay: i * 0.045 })); },
+    chain() { [880, 1320, 1760, 990, 1485].forEach((f, i) => playTone({ type: 'square', from: f, to: f * 0.72, dur: 0.12, vol: 0.16, delay: i * 0.035 })); },
     gameover() { playTone({ type: 'triangle', from: 300, to: 100, dur: 0.8, vol: 0.3 }); },
     bgmTick(high) {
       const f = high ? 987.77 : 783.99; // B5 / G5
@@ -285,6 +287,8 @@
     speedUpFrames: 0,
     hourglassFrames: 0,
     rainbowFrames: 0,
+    chainFrames: 0,
+    lightningBolts: [],
     spawnCounter: 0,
     mouse: { x: W / 2, y: H / 2 },
     shakeFrames: 0,
@@ -322,6 +326,7 @@
     else if (type === 'speedUp') state.items.push({ ...base, type, r: 22, vy: -3.2, g: 0.17, vx: (Math.random() - 0.5) * 2, angle: 0 });
     else if (type === 'hourglass') state.items.push({ ...base, type, r: 22, vy: -2.6, g: 0.13, vx: (Math.random() - 0.5) * 1.7, angle: 0 });
     else if (type === 'rainbow') state.items.push({ ...base, type, r: 24, vy: -3.4, g: 0.15, vx: (Math.random() - 0.5) * 2.2, angle: 0 });
+    else if (type === 'chain') state.items.push({ ...base, type, r: 23, vy: -3, g: 0.14, vx: (Math.random() - 0.5) * 2, angle: 0 });
   }
   function maybeDropFromBalloon(x, y) {
     const r = Math.random();
@@ -333,7 +338,8 @@
     else if (r < 0.96) spawnItem('magnet', x, y);
     else if (r < 0.972) spawnItem('shield', x, y);
     else if (r < 0.987) spawnItem('speedUp', x, y);
-    else if (r < 0.997) spawnItem('hourglass', x, y);
+    else if (r < 0.993) spawnItem('hourglass', x, y);
+    else if (r < 0.998) spawnItem('chain', x, y);
     else spawnItem('rainbow', x, y);
   }
   function spawnParticles(x, y, color) {
@@ -618,6 +624,48 @@
     ctx.fillText('🌈', 0, 2);
     ctx.restore();
   }
+  function drawChain(it) {
+    ctx.save();
+    ctx.translate(it.x, it.y);
+    it.angle += 0.11;
+    ctx.rotate(Math.sin(it.angle) * 0.3);
+    const r = it.r;
+    const pulse = 0.65 + 0.35 * Math.sin(Date.now() * 0.014);
+    ctx.shadowBlur = 28 * pulse; ctx.shadowColor = '#8affff';
+    ctx.fillStyle = 'rgba(138,255,255,0.18)';
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.arc(0, 0, r - 2, 0, Math.PI * 2); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.font = `${r * 1.35}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🔗', 0, 1);
+    ctx.restore();
+  }
+  function drawLightningBolts() {
+    for (const bolt of state.lightningBolts) {
+      const a = Math.max(0, bolt.life);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = '#8affff';
+      ctx.lineWidth = 4 * a;
+      ctx.shadowBlur = 18; ctx.shadowColor = '#8affff';
+      ctx.beginPath();
+      ctx.moveTo(bolt.from.x, bolt.from.y);
+      for (let i = 1; i <= 4; i++) {
+        const t = i / 5;
+        const x = bolt.from.x + (bolt.to.x - bolt.from.x) * t + (Math.random() - 0.5) * 22;
+        const y = bolt.from.y + (bolt.to.y - bolt.from.y) * t + (Math.random() - 0.5) * 22;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(bolt.to.x, bolt.to.y);
+      ctx.stroke();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5 * a;
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
   function drawShield(it) {
     ctx.save();
     ctx.translate(it.x, it.y);
@@ -788,6 +836,24 @@
       spawnParticles(it.x, it.y, '#ff44cc');
       spawnParticles(it.x, it.y, '#33aaff');
       sfx.rainbow();
+    } else if (it.type === 'chain') {
+      const targets = state.balloons
+        .filter(b => b.alive)
+        .sort((a, b) => Math.hypot(a.x - it.x, a.y - it.y) - Math.hypot(b.x - it.x, b.y - it.y))
+        .slice(0, 5);
+      let from = { x: it.x, y: it.y };
+      for (const b of targets) {
+        b.alive = false;
+        state.lightningBolts.push({ from, to: { x: b.x, y: b.y }, life: 1 });
+        spawnParticles(b.x, b.y, '#8affff');
+        spawnParticles(b.x, b.y, b.color);
+        from = { x: b.x, y: b.y };
+      }
+      state.score += targets.length * (state.invincibleFrames > 0 ? 2 : 1);
+      state.chainFrames = 90;
+      state.shakeFrames = Math.max(state.shakeFrames, 12);
+      spawnParticles(it.x, it.y, '#ffffff');
+      sfx.chain();
     } else if (it.type === 'shield') {
       state.shieldFrames = 300;
       spawnParticles(it.x, it.y, '#00ddff');
@@ -898,6 +964,18 @@
     } else if (state.freezeFrames <= 0 && state.multiShotFrames <= 0 && state.magnetFrames <= 0 && state.shieldFrames <= 0 && state.speedUpFrames <= 0 && state.hourglassFrames <= 0) {
       document.getElementById('freezeBar').style.display = 'none';
     }
+    if (state.chainFrames > 0) {
+      state.chainFrames--;
+      const bar = document.getElementById('freezeBar');
+      if (state.freezeFrames <= 0 && state.multiShotFrames <= 0 && state.magnetFrames <= 0 && state.shieldFrames <= 0 && state.speedUpFrames <= 0 && state.hourglassFrames <= 0 && state.rainbowFrames <= 0) {
+        bar.style.display = 'block';
+        bar.style.background = 'linear-gradient(90deg,#8affff,#ffffff,#7b61ff)';
+        bar.style.opacity = (state.frame % 18 < 9) ? '1' : '0.76';
+        bar.textContent = '🔗 連鎖閃電!';
+      }
+    } else if (state.freezeFrames <= 0 && state.multiShotFrames <= 0 && state.magnetFrames <= 0 && state.shieldFrames <= 0 && state.speedUpFrames <= 0 && state.hourglassFrames <= 0 && state.rainbowFrames <= 0) {
+      document.getElementById('freezeBar').style.display = 'none';
+    }
 
     // balloons
     for (const b of state.balloons) {
@@ -930,6 +1008,8 @@
       p.life -= 0.025;
     }
     state.particles = state.particles.filter(p => p.life > 0);
+    for (const bolt of state.lightningBolts) bolt.life -= 0.08;
+    state.lightningBolts = state.lightningBolts.filter(bolt => bolt.life > 0);
 
     // invincible BGM
     if (state.invincibleFrames > 0) {
@@ -972,7 +1052,9 @@
       else if (it.type === 'speedUp') drawSpeedUp(it);
       else if (it.type === 'hourglass') drawHourglass(it);
       else if (it.type === 'rainbow') drawRainbow(it);
+      else if (it.type === 'chain') drawChain(it);
     }
+    drawLightningBolts();
     drawParticles();
     drawCursor();
   }
@@ -1020,6 +1102,8 @@
     state.speedUpFrames = 0;
     state.hourglassFrames = 0;
     state.rainbowFrames = 0;
+    state.chainFrames = 0;
+    state.lightningBolts = [];
     state.spawnCounter = 0;
     state.shakeFrames = 0;
     state.running = true;

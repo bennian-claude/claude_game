@@ -343,7 +343,7 @@
 
 <div id="game-wrapper">
     <h1>CYBER TETRIS</h1>
-    <p style="margin:-8px 0 0;color:rgba(255,255,255,0.35);font-size:11px;letter-spacing:2px">Release v1.0.7</p>
+    <p style="margin:-8px 0 0;color:rgba(255,255,255,0.35);font-size:11px;letter-spacing:2px">Release v1.0.8</p>
 
     <div id="game-container">
         <div id="canvas-wrapper">
@@ -369,7 +369,7 @@
                 <div class="info-box">
                     <span>LEVEL</span>
                     <strong id="level">1</strong>
-                    <span style="margin-top:8px">CORE</span>
+                    <span style="margin-top:8px">CORE / SHIELD</span>
                     <strong id="core-status" style="font-size:0.95rem">READY</strong>
                 </div>
             </div>
@@ -421,7 +421,8 @@
         '#ff00ff',
         '#ffee00',
         '#8affff',
-        '#ff9f1c'
+        '#ff9f1c',
+        '#55ff88'
     ];
 
     const standardPieces = {
@@ -542,6 +543,18 @@
             ctx.moveTo(x + 0.32, y + 0.48);
             ctx.lineTo(x + 0.68, y + 0.48);
             ctx.stroke();
+        } else if (value === 15) {
+            ctx.fillStyle = 'rgba(85,255,136,0.4)';
+            ctx.beginPath();
+            ctx.arc(x + 0.5, y + 0.5, 0.34, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 0.05;
+            ctx.beginPath();
+            ctx.moveTo(x + 0.5, y + 0.18);
+            ctx.quadraticCurveTo(x + 0.82, y + 0.3, x + 0.5, y + 0.82);
+            ctx.quadraticCurveTo(x + 0.18, y + 0.3, x + 0.5, y + 0.18);
+            ctx.stroke();
         } else {
             ctx.fillStyle = color;
             ctx.globalAlpha = isGhost ? 0.1 : 0.4;
@@ -571,7 +584,8 @@
             if (rand < 0.51) return { matrix: [[10,10],[10,10]], type: 'heavy' };
             if (rand < 0.68) return { matrix: [[12,12,12,12]], type: 'laser' };
             if (rand < 0.82) return { matrix: [[13]], type: 'timecore' };
-            if (rand < 0.94) return { matrix: [[14],[14],[14]], type: 'drill' };
+            if (rand < 0.91) return { matrix: [[14],[14],[14]], type: 'drill' };
+            if (rand < 0.98) return { matrix: [[15,15],[0,15]], type: 'shield' };
 
             let normal = generateNormalMatrix();
             let quantumMatrix = normal.map(row => row.map(v => v !== 0 ? 11 : 0));
@@ -591,7 +605,7 @@
         matrix: null,
         nextObj: null,
         specialType: 'normal',
-        score: 0, lines: 0, level: 1,
+        score: 0, lines: 0, level: 1, shields: 0,
         trail: []
     };
 
@@ -618,6 +632,7 @@
     function merge(board, p) {
         let isBomb = false;
         let isTimeCore = false;
+        let shieldBlocks = 0;
         const laserRows = new Set();
         const drillCols = new Set();
         p.matrix.forEach((row, y) => {
@@ -632,6 +647,7 @@
                         if (value === 12) laserRows.add(by);
                         if (value === 13) isTimeCore = true;
                         if (value === 14) drillCols.add(bx);
+                        if (value === 15) shieldBlocks++;
                     }
                 }
             });
@@ -677,6 +693,11 @@
             player.score += 120;
             lasers.push({y: Math.max(0, Math.min(19, p.pos.y)), life: 0.7});
             triggerScreenShake();
+        }
+        if (shieldBlocks > 0) {
+            player.shields = Math.min(3, player.shields + 1);
+            player.score += 120;
+            lasers.push({y: Math.max(0, Math.min(19, p.pos.y + 1)), life: 0.55});
         }
     }
 
@@ -738,9 +759,22 @@
         drawNextPiece();
 
         if (collide(arena, player)) {
-            gameState = 'GAMEOVER';
-            showOverlay('SYSTEM FAILURE', `最終分數: ${player.score}`);
-            if (window.onCyberTetrisEnd) window.onCyberTetrisEnd(player.score, player.lines, player.level);
+            if (player.shields > 0) {
+                player.shields--;
+                for (let y = 0; y < 4; y++) {
+                    for (let x = 0; x < arena[y].length; x++) {
+                        if (arena[y][x] !== 0) createParticles(x, y, '#55ff88', 8);
+                        arena[y][x] = 0;
+                    }
+                }
+                player.score += 250;
+                triggerScreenShake();
+                updateScore();
+            } else {
+                gameState = 'GAMEOVER';
+                showOverlay('SYSTEM FAILURE', `最終分數: ${player.score}`);
+                if (window.onCyberTetrisEnd) window.onCyberTetrisEnd(player.score, player.lines, player.level);
+            }
         }
     }
 
@@ -889,6 +923,12 @@
     function updateScore() {
         document.getElementById('score').innerText = player.score;
         document.getElementById('level').innerText = player.level;
+        const coreStatus = document.getElementById('core-status');
+        if (coreStatus && slowMoTimer <= 0) {
+            coreStatus.innerText = player.shields > 0 ? `SHIELD x${player.shields}` : 'READY';
+            coreStatus.style.color = player.shields > 0 ? '#55ff88' : '#fff';
+            coreStatus.style.textShadow = player.shields > 0 ? '0 0 12px #55ff88' : '';
+        }
     }
 
     let dropCounter = 0;
@@ -917,9 +957,9 @@
         }
         const coreStatus = document.getElementById('core-status');
         if (coreStatus) {
-            coreStatus.innerText = slowMoTimer > 0 ? `${Math.ceil(slowMoTimer / 1000)}s` : 'READY';
-            coreStatus.style.color = slowMoTimer > 0 ? '#8affff' : '#fff';
-            coreStatus.style.textShadow = slowMoTimer > 0 ? '0 0 12px #8affff' : '';
+            coreStatus.innerText = slowMoTimer > 0 ? `${Math.ceil(slowMoTimer / 1000)}s` : (player.shields > 0 ? `SHIELD x${player.shields}` : 'READY');
+            coreStatus.style.color = slowMoTimer > 0 ? '#8affff' : (player.shields > 0 ? '#55ff88' : '#fff');
+            coreStatus.style.textShadow = slowMoTimer > 0 ? '0 0 12px #8affff' : (player.shields > 0 ? '0 0 12px #55ff88' : '');
         }
 
         dropCounter += deltaTime;
@@ -969,7 +1009,7 @@
     function togglePause() {
         if (gameState === 'START' || gameState === 'GAMEOVER') {
             arena.forEach(row => row.fill(0));
-            player.score = 0; player.lines = 0; player.level = 1;
+            player.score = 0; player.lines = 0; player.level = 1; player.shields = 0;
             player.nextObj = null; particles = []; lasers = []; drillBeams = []; slowMoTimer = 0;
             playerReset();
             updateScore();

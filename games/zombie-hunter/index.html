@@ -148,10 +148,10 @@ function respawn(z) {
   z.vx = 0; z.vy = 0;
 }
 
-function makeZombie(chaser = false, fast = false, giant = false, invisible = false, teleport = false, frost = false, poison = false, split = false, mini = false) {
+function makeZombie(chaser = false, fast = false, giant = false, invisible = false, teleport = false, frost = false, poison = false, split = false, mini = false, mirror = false) {
   const z = { x: 0, y: 0, vx: 0, vy: 0,
-              r: mini ? 10 : (split ? 24 : (poison ? 18 : (frost ? 20 : (chaser ? 19 : (fast ? 12 : (giant ? 32 : 17)))))),
-              chaser, fast, giant, invisible, teleport, frost, poison, split, mini,
+              r: mini ? 10 : (split ? 24 : (mirror ? 21 : (poison ? 18 : (frost ? 20 : (chaser ? 19 : (fast ? 12 : (giant ? 32 : 17))))))),
+              chaser, fast, giant, invisible, teleport, frost, poison, split, mini, mirror,
               hp: giant ? 3 : 1,
               wobble: Math.random() * Math.PI * 2,
               wSpd: fast ? 3.5 : (1.2 + Math.random() * 1.5),
@@ -222,7 +222,7 @@ function startGame() {
   particles = [];
   frostSlowTimer = 0;
   toxicBoostTimer = 0;
-  // 1 普通 + 1 快速 + 1 巨型 + 1 追殺者 + 1 隱形 + 1 傳送 + 1 冰霜 + 1 毒霧 + 1 分裂
+  // 1 普通 + 1 快速 + 1 巨型 + 1 追殺者 + 1 隱形 + 1 傳送 + 1 冰霜 + 1 毒霧 + 1 分裂 + 1 鏡像
   zombies = [
     makeZombie(false),
     makeZombie(false, true),               // fast
@@ -232,7 +232,8 @@ function startGame() {
     makeZombie(false, false, false, false, true),  // teleport
     makeZombie(false, false, false, false, false, true),  // frost
     makeZombie(false, false, false, false, false, false, true),  // poison
-    makeZombie(false, false, false, false, false, false, false, true)  // split
+    makeZombie(false, false, false, false, false, false, false, true),  // split
+    makeZombie(false, false, false, false, false, false, false, false, false, true)  // mirror
   ];
   state = 'playing';
 }
@@ -289,7 +290,16 @@ function updateZombie(z, dt) {
 
   const frostMul = frostSlowTimer > 0 ? 0.45 : 1;
 
-  if (z.split || z.mini) {
+  if (z.mirror) {
+    // ── 鏡像殭屍：本體漂移，對稱位置會投影另一個可擊殺影像 ──
+    const ex = z.x - player.x, ey = z.y - player.y;
+    const ed = Math.sqrt(ex*ex + ey*ey) || 1;
+    let fx = ex / ed + Math.sin(z.wobble * 1.9) * 1.15;
+    let fy = ey / ed + Math.cos(z.wobble * 2.2) * 1.15;
+    const fl = Math.sqrt(fx*fx + fy*fy) || 1;
+    const spd = (hunterMode ? ZOMBIE_HUNT_SPD * 0.48 : ZOMBIE_SPEED * 0.86) * frostMul;
+    z.vx = (fx/fl) * spd; z.vy = (fy/fl) * spd;
+  } else if (z.split || z.mini) {
     // ── 分裂殭屍：主體蛇形逃跑，擊殺後裂成兩隻小殭屍 ──
     const ex = z.x - player.x, ey = z.y - player.y;
     const ed = Math.sqrt(ex*ex + ey*ey) || 1;
@@ -382,7 +392,8 @@ function updateZombie(z, dt) {
   // ── 碰撞判定 ──
   if (z.invincible > 0) return; // 剛重生的無敵期
   const cdx = player.x - z.x, cdy = player.y - z.y;
-  if (Math.hypot(cdx, cdy) < player.r + z.r) {
+  const mirrorHit = z.mirror && Math.hypot(player.x - (W - z.x), player.y - z.y) < player.r + z.r;
+  if (Math.hypot(cdx, cdy) < player.r + z.r || mirrorHit) {
     if (z.chaser) {
       // 追殺者碰到玩家 → 扣命
       lives--;
@@ -417,6 +428,17 @@ function updateZombie(z, dt) {
           zombies.push(mini);
         }
       }
+      if (kills >= KILL_TARGET) {
+        lastScore = Math.floor(timeLeft * 80) + lives * 500;
+        state = 'win';
+        if (window.onZombieHunterEnd) window.onZombieHunterEnd(lastScore, kills, lives, timeLeft);
+        return;
+      }
+      respawn(z); z.invincible = 1.2;
+    } else if (z.mirror) {
+      kills += 2;
+      burst(z.x, z.y, '#c8f7ff', 22);
+      burst(W - z.x, z.y, '#ffffff', 22);
       if (kills >= KILL_TARGET) {
         lastScore = Math.floor(timeLeft * 80) + lives * 500;
         state = 'win';
@@ -545,6 +567,29 @@ function drawPlayer(ts) {
 function drawZombie(z, ts) {
   const pulse = 0.75 + 0.25 * Math.sin(ts * 0.003 + z.wobble);
   let col, glow, icon;
+  if (z.mirror) {
+    const drawOne = (x, y, alpha) => {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.shadowBlur = 26 * pulse; ctx.shadowColor = '#c8f7ff';
+      const g = ctx.createRadialGradient(x, y, 0, x, y, z.r * 2);
+      g.addColorStop(0, 'rgba(200,247,255,0.65)');
+      g.addColorStop(0.55, 'rgba(120,120,255,0.18)');
+      g.addColorStop(1, 'rgba(120,120,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, y, z.r * 2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = hunterMode ? '#ffffff' : '#b7f7ff';
+      ctx.beginPath(); ctx.arc(x, y, z.r, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.font = `${z.r * 1.35}px sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('🪞', x, y + 1);
+      ctx.restore();
+    };
+    drawOne(W - z.x, z.y, 0.46 + 0.18 * Math.sin(ts * 0.006));
+    drawOne(z.x, z.y, 0.92);
+    return;
+  }
   if (z.split || z.mini) {
     ctx.save();
     const alpha = z.mini ? 0.84 : 0.95;
@@ -762,7 +807,7 @@ function drawMenu(ts) {
   ctx.fillStyle = 'rgba(255,255,255,0.2)';
   ctx.font = '11px Orbitron, sans-serif';
   ctx.textAlign = 'right';
-  ctx.fillText('Release v1.0.7', W - 8, H - 8);
+  ctx.fillText('Release v1.0.8', W - 8, H - 8);
 
   // ── 怪物說明 ──
   ctx.fillStyle = 'rgba(200,136,255,0.7)';
@@ -775,7 +820,7 @@ function drawMenu(ts) {
   ctx.fillStyle = 'rgba(155,231,255,0.72)';
   ctx.fillText('❄️ 冰霜殭屍：擊殺 +2，全場緩速 3 秒  ☣️ 毒霧殭屍：擊殺後衝刺 4 秒', W/2, H * 0.965);
   ctx.fillStyle = 'rgba(255,102,204,0.72)';
-  ctx.fillText('🧬 分裂殭屍：擊殺 +2，裂成兩隻迷你殭屍', W/2, H * 0.99);
+  ctx.fillText('🧬 分裂殭屍：擊殺 +2，裂成兩隻迷你殭屍  🪞 鏡像殭屍：本體與鏡像皆可擊殺', W/2, H * 0.99);
 
   // ── 骷髏粒子特效 ──
   if (Math.random() < 0.08) {
