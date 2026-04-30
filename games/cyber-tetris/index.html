@@ -17,6 +17,7 @@
             overflow: hidden;
             text-transform: uppercase;
             touch-action: manipulation;
+            overscroll-behavior: none;
         }
 
         #game-wrapper {
@@ -361,6 +362,19 @@
             }
             #tetris { width: 288px; height: 480px; }
             #leaderboard-panel { display: none; }
+            body.game-over #leaderboard-panel {
+                display: block;
+                position: fixed;
+                left: 50%;
+                bottom: calc(12px + env(safe-area-inset-bottom));
+                width: min(360px, calc(100vw - 24px));
+                max-height: min(52dvh, 360px);
+                overflow-y: auto;
+                z-index: 70;
+                transform: translateX(-50%);
+                -webkit-overflow-scrolling: touch;
+                touch-action: pan-y;
+            }
             #overlay-title { font-size: 2rem; }
             #overlay-btn { font-size: 1rem !important; padding: 13px 28px !important; }
         }
@@ -384,7 +398,14 @@
             align-items: center;
             border-radius: 8px;
             backdrop-filter: blur(8px);
-            z-index: 10;
+            z-index: 60;
+            pointer-events: auto;
+        }
+
+        body:not(.controls-active) #controls {
+            opacity: 0.38;
+            pointer-events: none;
+            z-index: 4;
         }
 
         #overlay-title {
@@ -833,6 +854,11 @@
                 player.score += 250;
                 triggerScreenShake();
                 updateScore();
+                if (collide(arena, player)) {
+                    gameState = 'GAMEOVER';
+                    showOverlay('SYSTEM FAILURE', `最終分數: ${player.score}`);
+                    if (window.onCyberTetrisEnd) window.onCyberTetrisEnd(player.score, player.lines, player.level);
+                }
             } else {
                 gameState = 'GAMEOVER';
                 showOverlay('SYSTEM FAILURE', `最終分數: ${player.score}`);
@@ -1060,10 +1086,18 @@
         }
 
         overlay.classList.remove('hidden');
+        syncInteractionLayers();
     }
 
     function hideOverlay() {
         document.getElementById('overlay-screen').classList.add('hidden');
+        syncInteractionLayers();
+    }
+
+    function syncInteractionLayers() {
+        const overlayHidden = document.getElementById('overlay-screen').classList.contains('hidden');
+        document.body.classList.toggle('controls-active', gameState === 'PLAYING' && overlayHidden);
+        document.body.classList.toggle('game-over', gameState === 'GAMEOVER');
     }
 
     const pauseBtn = document.getElementById('pause-btn');
@@ -1131,8 +1165,12 @@
         };
         const run = e => {
             e.preventDefault();
+            if (gameState !== 'PLAYING') {
+                el.classList.remove('pressed');
+                clearTimers();
+                return;
+            }
             el.classList.add('pressed');
-            if (gameState !== 'PLAYING') return;
             action();
             if (repeat) {
                 clearTimers();
@@ -1159,6 +1197,7 @@
     bindTouch('btn-down', () => playerDrop(), true);
     bindTouch('btn-up', () => playerRotate(1));
 
+    syncInteractionLayers();
     draw();
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>

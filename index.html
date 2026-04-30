@@ -869,7 +869,7 @@
   <main class="game-grid" id="gameGrid"></main>
 </div>
 
-<footer>GAME HUB &nbsp;·&nbsp; <span>班級互動平台</span> &nbsp;·&nbsp; Built with Claude Code &nbsp;·&nbsp; <span>Release v1.0.8</span></footer>
+<footer>GAME HUB &nbsp;·&nbsp; <span>班級互動平台</span> &nbsp;·&nbsp; Built with Claude Code &nbsp;·&nbsp; <span>Release v1.0.9</span></footer>
 
 <!-- ══════════════════ STARFIELD ══════════════════ -->
 <script>
@@ -1403,6 +1403,90 @@ function paintCyberTetris(canvas) {
   }
   draw();
 }
+
+/* ── Painter 4: LCD Retro Gunfighter ────────────────────── */
+function paintLCDRetro(canvas) {
+  const W = canvas.width = 560, H = canvas.height = 315;
+  const ctx = canvas.getContext("2d");
+  let frame = 0;
+  const lanes = [112, 210, 352, 462];
+  const shots = [];
+
+  function drawLCDPerson(x, y, facing = 1, role = "cowboy") {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(facing, 1);
+    ctx.strokeStyle = "#15231a";
+    ctx.fillStyle = "#15231a";
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(-18, -42); ctx.lineTo(0, -52); ctx.lineTo(18, -42); ctx.lineTo(8, -39); ctx.lineTo(-10, -40); ctx.closePath(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, -30, 12, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -17); ctx.lineTo(0, 16); ctx.lineTo(-14, 38); ctx.moveTo(0, 16); ctx.lineTo(15, 38); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-2, -8); ctx.lineTo(-28, 2); ctx.lineTo(-42, -2); ctx.moveTo(6, -9); ctx.lineTo(26, 2); ctx.stroke();
+    if (role === "bar") {
+      ctx.strokeRect(-24, 22, 50, 18);
+      ctx.beginPath(); ctx.moveTo(-16, 40); ctx.lineTo(-22, 52); ctx.moveTo(18, 40); ctx.lineTo(24, 52); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function draw() {
+    frame++;
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#c3d1c2");
+    bg.addColorStop(1, "#aebdaa");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.strokeStyle = "rgba(21,35,26,0.18)";
+    ctx.lineWidth = 2;
+    for (let y = 40; y < 244; y += 42) {
+      ctx.beginPath(); ctx.moveTo(20, y); ctx.lineTo(W - 20, y + Math.sin(frame * 0.02 + y) * 2); ctx.stroke();
+    }
+    ctx.strokeStyle = "rgba(21,35,26,0.62)";
+    ctx.strokeRect(18, 18, W - 36, H - 36);
+    ctx.strokeStyle = "rgba(21,35,26,0.28)";
+    ctx.beginPath(); ctx.moveTo(0, 248); ctx.lineTo(W, 248); ctx.stroke();
+
+    drawLCDPerson(lanes[0] + Math.sin(frame * 0.035) * 8, 230, 1, "cowboy");
+    drawLCDPerson(lanes[1], 160 + Math.sin(frame * 0.04) * 4, 1, "patron");
+    drawLCDPerson(lanes[2], 160 + Math.cos(frame * 0.035) * 4, -1, "patron");
+    drawLCDPerson(lanes[3], 112 + Math.sin(frame * 0.03) * 5, -1, "bar");
+
+    if (frame % 70 === 1) {
+      shots.push({ x: lanes[3] - 28, y: 112, vx: -3.2 });
+    }
+    for (let i = shots.length - 1; i >= 0; i--) {
+      const s = shots[i];
+      s.x += s.vx;
+      ctx.fillStyle = "#15231a";
+      ctx.beginPath(); ctx.arc(s.x, s.y, 7, 0, Math.PI * 2); ctx.fill();
+      if (s.x < -20) shots.splice(i, 1);
+    }
+
+    const pulse = 0.55 + Math.sin(frame * 0.08) * 0.35;
+    ctx.fillStyle = `rgba(21,35,26,${pulse})`;
+    ctx.font = "bold 24px monospace";
+    ctx.fillText("SCORE 0120", 28, 288);
+    ctx.fillText("LIFE 3", 432, 288);
+    ctx.font = "bold 13px monospace";
+    ctx.fillStyle = "rgba(21,35,26,0.56)";
+    ctx.fillText("LCD RESTAURANT GUNFIGHTER", 24, 30);
+
+    const glare = ctx.createLinearGradient(0, 0, W, H);
+    glare.addColorStop(0, "rgba(255,255,255,0.22)");
+    glare.addColorStop(0.42, "rgba(255,255,255,0)");
+    glare.addColorStop(1, "rgba(255,255,255,0.16)");
+    ctx.fillStyle = glare;
+    ctx.fillRect(0, 0, W, H);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
 </script>
 
 <!-- Firebase -->
@@ -1497,6 +1581,21 @@ const games = [
       { ver: "v1.0.0", text: "新增 Cyber Tetris，含特殊方塊與 Firebase 排行榜" },
     ]
   },
+  {
+    name: "LCD 懷舊槍手",
+    desc: "復古掌機 LCD 風餐廳槍手遊戲！左右移動、抓準時機射擊啤酒與餐廳敵人。",
+    tag: "Retro",
+    accent: "#d8b13f",
+    stars: "★★★★☆",
+    url: "games/lcd-retro/index.html",
+    icon: "assets/images/lcd-retro-cover-v109.jpeg",
+    covers: ["assets/images/lcd-retro-cover-v109.jpeg"],
+    collection: "lcd_retro",
+    painter: "lcd",
+    changelog: [
+      { ver: "v1.0.9", text: "新增 LCD 懷舊槍手，含手機控制、回主畫面與 Firebase 排行榜" },
+    ]
+  },
 ];
 
 const FIREBASE_CONFIG = {
@@ -1573,6 +1672,9 @@ function extraMeta(game, row) {
     const lines = typeof row.lines === "number" ? `消除 ${row.lines} 行` : "";
     const level = typeof row.level === "number" ? ` · LV ${row.level}` : "";
     return `${lines}${level}`;
+  }
+  if (game.collection === "lcd_retro") {
+    return typeof row.lives === "number" ? `剩餘 LIFE ${row.lives}` : "";
   }
   return "";
 }
@@ -1706,6 +1808,7 @@ games.forEach((g, i) => {
     if(g.painter === "rhythm")  paintRhythm(cvs);
     if(g.painter === "zombie")  paintZombieHunter(cvs);
     if(g.painter === "cyber")   paintCyberTetris(cvs);
+    if(g.painter === "lcd")     paintLCDRetro(cvs);
   });
 });
 

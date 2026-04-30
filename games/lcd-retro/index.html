@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LCD Restaurant Gunfighter</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="game-panel" aria-label="LCD restaurant gunfighter game">
+        <canvas id="game" width="576" height="342"></canvas>
+        <div id="endScreen" class="end-screen hidden" aria-live="polite">
+          <div class="end-card">
+            <p class="eyebrow">LCD ROUND OVER</p>
+            <h1>GAME OVER</h1>
+            <p id="finalScore">SCORE 0000</p>
+            <div id="nameInputSection">
+              <input id="playerNameInput" type="text" maxlength="8" placeholder="名字或座號">
+              <div class="score-actions">
+                <button id="submitScoreBtn" type="button">送出分數</button>
+                <button id="skipScoreBtn" type="button">跳過</button>
+              </div>
+            </div>
+            <div id="leaderboardSection" class="hidden">
+              <h2>TOP 10</h2>
+              <div id="leaderboardList"></div>
+            </div>
+            <div class="end-actions">
+              <button id="endRestartButton" type="button">再玩一次</button>
+              <button id="homeButton" type="button">回主畫面</button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <footer class="controls">
+        <label class="file-button">
+          <input id="backgroundFile" type="file" accept="image/png,image/jpeg,image/webp">
+          套用餐廳圖
+        </label>
+        <button id="restartButton" type="button">重新開始</button>
+        <button id="leftButton" type="button" aria-label="左移">←</button>
+        <button id="shootButton" type="button" aria-label="射擊">FIRE</button>
+        <button id="rightButton" type="button" aria-label="右移">→</button>
+        <button id="footerHomeButton" type="button">回主畫面</button>
+        <p id="statusLine">讀取 assets/restaurant.png...</p>
+      </footer>
+    </main>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
