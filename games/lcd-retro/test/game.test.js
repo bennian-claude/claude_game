@@ -74,3 +74,17 @@ test('shooting a seated patron makes them throw something at the gunfighter', ()
   assert.equal(state.projectiles[0].owner, 'table-left');
   assert.equal(state.flash.kind, 'patron');
 });
+
+test('coffee bonus can be shot for score and one extra life', () => {
+  const state = createInitialState({ random: () => 0.9 });
+  state.playerLane = 1;
+  state.lives = 2;
+  state.projectiles.push({ type: 'coffee', lane: 1, x: 236, y: 180, vx: 0, vy: 0.055, timer: 1000 });
+
+  shoot(state);
+
+  assert.equal(state.score, 80);
+  assert.equal(state.lives, 3);
+  assert.equal(state.projectiles.length, 0);
+  assert.equal(state.flash.kind, 'coffee');
+});

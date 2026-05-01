@@ -175,7 +175,7 @@
 
 <div id="startScreen" class="overlay">
   <h1>🎈 射氣球大作戰 🎈</h1>
-  <p style="font-size:12px;opacity:0.45;margin-bottom:4px">Release v1.0.8</p>
+  <p style="font-size:12px;opacity:0.45;margin-bottom:4px">Release v1.0.10</p>
   <p>20 秒內射破氣球並收集掉落物拿最高分！</p>
   <div class="rules">
     <span>🎈 氣球 +1</span>
@@ -332,6 +332,7 @@ function goHome() {
     hourglassFrames: 0,
     rainbowFrames: 0,
     chainFrames: 0,
+    cloneFrames: 0,
     lightningBolts: [],
     spawnCounter: 0,
     mouse: { x: W / 2, y: H / 2 },
@@ -371,6 +372,7 @@ function goHome() {
     else if (type === 'hourglass') state.items.push({ ...base, type, r: 22, vy: -2.6, g: 0.13, vx: (Math.random() - 0.5) * 1.7, angle: 0 });
     else if (type === 'rainbow') state.items.push({ ...base, type, r: 24, vy: -3.4, g: 0.15, vx: (Math.random() - 0.5) * 2.2, angle: 0 });
     else if (type === 'chain') state.items.push({ ...base, type, r: 23, vy: -3, g: 0.14, vx: (Math.random() - 0.5) * 2, angle: 0 });
+    else if (type === 'clone') state.items.push({ ...base, type, r: 23, vy: -2.8, g: 0.13, vx: (Math.random() - 0.5) * 2, angle: 0 });
   }
   function maybeDropFromBalloon(x, y) {
     const r = Math.random();
@@ -383,7 +385,8 @@ function goHome() {
     else if (r < 0.972) spawnItem('shield', x, y);
     else if (r < 0.987) spawnItem('speedUp', x, y);
     else if (r < 0.993) spawnItem('hourglass', x, y);
-    else if (r < 0.998) spawnItem('chain', x, y);
+    else if (r < 0.997) spawnItem('chain', x, y);
+    else if (r < 0.999) spawnItem('clone', x, y);
     else spawnItem('rainbow', x, y);
   }
   function spawnParticles(x, y, color) {
@@ -686,6 +689,26 @@ function goHome() {
     ctx.fillText('🔗', 0, 1);
     ctx.restore();
   }
+  function drawClone(it) {
+    ctx.save();
+    ctx.translate(it.x, it.y);
+    it.angle += 0.08;
+    ctx.rotate(Math.sin(it.angle) * 0.26);
+    const r = it.r;
+    const pulse = 0.62 + 0.38 * Math.sin(Date.now() * 0.012);
+    ctx.shadowBlur = 28 * pulse; ctx.shadowColor = '#d47cff';
+    ctx.fillStyle = 'rgba(212,124,255,0.18)';
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#d47cff'; ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.arc(-5, 0, r - 8, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(7, 0, r - 8, 0, Math.PI * 2); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.font = `${r * 1.1}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🫧', 0, 2);
+    ctx.restore();
+  }
   function drawLightningBolts() {
     for (const bolt of state.lightningBolts) {
       const a = Math.max(0, bolt.life);
@@ -898,6 +921,34 @@ function goHome() {
       state.shakeFrames = Math.max(state.shakeFrames, 12);
       spawnParticles(it.x, it.y, '#ffffff');
       sfx.chain();
+    } else if (it.type === 'clone') {
+      const targets = state.balloons
+        .filter(b => b.alive)
+        .sort((a, b) => Math.hypot(a.x - it.x, a.y - it.y) - Math.hypot(b.x - it.x, b.y - it.y))
+        .slice(0, 4);
+      for (const b of targets) {
+        for (const dir of [-1, 1]) {
+          const radius = Math.max(16, b.r * 0.55);
+          state.balloons.push({
+            x: Math.max(radius, Math.min(W - radius, b.x + dir * (b.r + 10))),
+            y: b.y + (Math.random() - 0.5) * 18,
+            r: radius,
+            vy: b.vy * 1.18,
+            baseX: Math.max(radius, Math.min(W - radius, b.x + dir * (b.r + 10))),
+            swing: Math.max(16, b.swing * 0.65),
+            swingSpeed: b.swingSpeed * 1.25,
+            phase: Math.random() * Math.PI * 2,
+            color: b.color,
+            alive: true,
+          });
+        }
+        spawnParticles(b.x, b.y, '#d47cff');
+      }
+      state.score += targets.length * 3 * (state.invincibleFrames > 0 ? 2 : 1);
+      state.cloneFrames = 90;
+      spawnParticles(it.x, it.y, '#d47cff');
+      spawnParticles(it.x, it.y, '#ffffff');
+      sfx.gift();
     } else if (it.type === 'shield') {
       state.shieldFrames = 300;
       spawnParticles(it.x, it.y, '#00ddff');
@@ -1097,6 +1148,7 @@ function goHome() {
       else if (it.type === 'hourglass') drawHourglass(it);
       else if (it.type === 'rainbow') drawRainbow(it);
       else if (it.type === 'chain') drawChain(it);
+      else if (it.type === 'clone') drawClone(it);
     }
     drawLightningBolts();
     drawParticles();
@@ -1150,6 +1202,7 @@ function goHome() {
     state.hourglassFrames = 0;
     state.rainbowFrames = 0;
     state.chainFrames = 0;
+    state.cloneFrames = 0;
     state.lightningBolts = [];
     state.spawnCounter = 0;
     state.shakeFrames = 0;

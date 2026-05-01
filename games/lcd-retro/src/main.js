@@ -109,7 +109,7 @@ function startGame() {
   submitScoreBtn.disabled = false;
   submitScoreBtn.textContent = '送出分數';
   nameInput.value = '';
-  statusLine.textContent = '方向鍵/A/D 移動，空白鍵/Enter 射擊。';
+  statusLine.textContent = '方向鍵/A/D 移動，空白鍵/Enter 射擊。射中咖啡補給可加分補命。';
 }
 
 function showEndScreen() {
@@ -244,6 +244,8 @@ function drawProjectiles() {
   for (const projectile of state.projectiles) {
     if (projectile.type === 'beer') {
       drawBeer(projectile.x, projectile.y);
+    } else if (projectile.type === 'coffee') {
+      drawCoffee(projectile.x, projectile.y);
     } else {
       drawThrownObject(projectile.x, projectile.y);
     }
@@ -261,6 +263,18 @@ function drawBeer(x, y) {
   ctx.beginPath();
   ctx.moveTo(x - 4, y - 14);
   ctx.lineTo(x + 4, y - 14);
+  ctx.stroke();
+}
+
+function drawCoffee(x, y) {
+  ctx.beginPath();
+  ctx.rect(x - 9, y - 7, 18, 16);
+  ctx.moveTo(x + 9, y - 3);
+  ctx.arc(x + 14, y, 5, -Math.PI / 2, Math.PI / 2);
+  ctx.moveTo(x - 5, y - 12);
+  ctx.lineTo(x - 1, y - 16);
+  ctx.moveTo(x + 2, y - 12);
+  ctx.lineTo(x + 6, y - 16);
   ctx.stroke();
 }
 
@@ -338,7 +352,7 @@ function drawFlash() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#111d16';
   ctx.font = '22px monospace';
-  const text = state.flash.kind === 'hit' ? 'HIT' : state.flash.kind === 'hurt' ? 'OUCH' : state.flash.kind === 'patron' ? 'HEY!' : 'MISS';
+  const text = state.flash.kind === 'hit' ? 'HIT' : state.flash.kind === 'hurt' ? 'OUCH' : state.flash.kind === 'coffee' ? 'COFFEE' : state.flash.kind === 'patron' ? 'HEY!' : 'MISS';
   ctx.fillText(text, pos.x - 22, Math.max(44, pos.y - 96));
   ctx.restore();
 }

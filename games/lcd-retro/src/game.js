@@ -21,6 +21,7 @@ export function createInitialState({ random = Math.random } = {}) {
     lives: 3,
     roundTime: 0,
     beerTimer: 500,
+    coffeeTimer: 2600,
     shotCooldown: 0,
     gameOver: false,
     flash: null,
@@ -46,8 +47,14 @@ export function shoot(state) {
   const projectileIndex = state.projectiles.findIndex((projectile) => projectile.lane === state.playerLane);
   if (projectileIndex >= 0) {
     const [projectile] = state.projectiles.splice(projectileIndex, 1);
-    state.score += projectile.type === 'beer' ? 50 : 30;
-    state.flash = { kind: 'hit', lane: state.playerLane, timer: 160 };
+    if (projectile.type === 'coffee') {
+      state.score += 80;
+      state.lives = Math.min(5, state.lives + 1);
+      state.flash = { kind: 'coffee', lane: state.playerLane, timer: 220 };
+    } else {
+      state.score += projectile.type === 'beer' ? 50 : 30;
+      state.flash = { kind: 'hit', lane: state.playerLane, timer: 160 };
+    }
     return;
   }
 
@@ -67,6 +74,7 @@ export function tickGame(state, deltaMs) {
 
   state.roundTime += deltaMs;
   state.beerTimer -= deltaMs;
+  state.coffeeTimer -= deltaMs;
   state.shotCooldown = Math.max(0, state.shotCooldown - deltaMs);
 
   if (state.flash) {
@@ -87,6 +95,17 @@ export function tickGame(state, deltaMs) {
       continue;
     }
 
+    if (projectile.type === 'coffee') {
+      projectile.lane = getBeerLane(projectile.x);
+      projectile.x += Math.sin(state.roundTime / 180) * 0.08 * deltaMs;
+      projectile.y += projectile.vy * deltaMs;
+      projectile.timer -= deltaMs;
+      if (projectile.timer <= 0 || projectile.y >= 306) {
+        state.projectiles.splice(index, 1);
+      }
+      continue;
+    }
+
     projectile.timer -= deltaMs;
     projectile.y += projectile.vy * deltaMs;
     if (projectile.timer <= 0) {
@@ -100,6 +119,11 @@ export function tickGame(state, deltaMs) {
   if (state.beerTimer <= 0) {
     spawnBeer(state);
     state.beerTimer = Math.max(850, 1800 - Math.floor(state.score / 250) * 80);
+  }
+
+  if (state.coffeeTimer <= 0) {
+    spawnCoffee(state);
+    state.coffeeTimer = 5200 + Math.floor(state.random() * 2200);
   }
 }
 
@@ -130,6 +154,22 @@ function spawnThrownObject(state, actor) {
     vx: (player.x - actor.x) / 850,
     vy: (player.y - 84 - actor.y) / 850,
     timer: 850
+  });
+}
+
+function spawnCoffee(state) {
+  if (state.projectiles.some((projectile) => projectile.type === 'coffee')) return;
+  const lane = 1 + Math.floor(state.random() * 2);
+  const pos = LANES[lane];
+  state.projectiles.push({
+    type: 'coffee',
+    owner: 'bonus',
+    lane,
+    x: pos.enemyX,
+    y: 102,
+    vx: 0,
+    vy: 0.055,
+    timer: 2600
   });
 }
 

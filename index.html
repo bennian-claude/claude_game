@@ -869,7 +869,7 @@
   <main class="game-grid" id="gameGrid"></main>
 </div>
 
-<footer>GAME HUB &nbsp;·&nbsp; <span>班級互動平台</span> &nbsp;·&nbsp; Built with Claude Code &nbsp;·&nbsp; <span>Release v1.0.9</span></footer>
+<footer>GAME HUB &nbsp;·&nbsp; <span>班級互動平台</span> &nbsp;·&nbsp; Built with Claude Code &nbsp;·&nbsp; <span>Release v1.0.10</span></footer>
 
 <!-- ══════════════════ STARFIELD ══════════════════ -->
 <script>
@@ -887,6 +887,21 @@
   }
   function draw(t){
     ctx.clearRect(0,0,c.width,c.height);
+    const cx = c.width * 0.5, cy = c.height * 0.42;
+    for (let i = 0; i < 3; i++) {
+      const p = ((t * 0.00012 + i / 3) % 1);
+      const radius = p * Math.max(c.width, c.height) * 0.7;
+      const alpha = (1 - p) * 0.14;
+      ctx.strokeStyle = `rgba(0,245,255,${alpha})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, radius * 1.55, radius * 0.42, -0.18, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = `rgba(255,176,0,${alpha * 0.7})`;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, radius * 1.2, radius * 0.32, 0.28, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     stars.forEach(s=>{
       const a=s.a*(0.65+0.35*Math.sin(t*s.sp*60+s.ph));
       ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
@@ -1604,10 +1619,11 @@ const games = [
     stars: "★★★★☆",
     url: "games/balloon-shooter/index.html",
     icon: "assets/images/balloon-aaa-icon.png",
-    covers: ["assets/images/balloon-aaa-icon.png", "assets/images/balloon-aaa-icon-v105.png", "assets/images/balloon-aaa-icon-v106.png", "assets/images/balloon-aaa-icon-v107.png", "assets/images/balloon-aaa-icon-v108.png"],
+    covers: ["assets/images/balloon-aaa-icon.png", "assets/images/balloon-aaa-icon-v105.png", "assets/images/balloon-aaa-icon-v106.png", "assets/images/balloon-aaa-icon-v107.png", "assets/images/balloon-aaa-icon-v108.png", "assets/images/balloon-aaa-icon-v110.jpeg"],
     collection: "balloon_shooter",
     painter: "balloon",
     changelog: [
+      { ver: "v1.0.10", text: "新增 🫧 複製泡泡 — 讓附近氣球分裂成小氣球" },
       { ver: "v1.0.8", text: "新增 🔗 連鎖閃電 — 連爆最近 5 顆氣球" },
       { ver: "v1.0.7", text: "新增 🌈 彩虹爆破 — 清空畫面氣球" },
       { ver: "v1.0.6", text: "新增 ⏳ 時間沙漏 — 額外 +3 秒" },
@@ -1626,10 +1642,11 @@ const games = [
     stars: "★★★★★",
     url: "games/rhythm-game/index.html",
     icon: "assets/images/rhythm-aaa-icon.png",
-    covers: ["assets/images/rhythm-aaa-icon.png", "assets/images/rhythm-aaa-icon-v105.png", "assets/images/rhythm-aaa-icon-v106.png", "assets/images/rhythm-aaa-icon-v107.png", "assets/images/rhythm-aaa-icon-v108.png"],
+    covers: ["assets/images/rhythm-aaa-icon.png", "assets/images/rhythm-aaa-icon-v105.png", "assets/images/rhythm-aaa-icon-v106.png", "assets/images/rhythm-aaa-icon-v107.png", "assets/images/rhythm-aaa-icon-v108.png", "assets/images/rhythm-aaa-icon-v110.jpeg"],
     collection: "rhythm_game",
     painter: "rhythm",
     changelog: [
+      { ver: "v1.0.10", text: "依新規格只新增 Art Deco 風格封面，不新增曲目或玩法" },
       { ver: "v1.0.9", text: "回復原始 Rhythm 版本，保留排行榜輸入並加入手機觸控" },
       { ver: "v1.0.0", text: "原始曲目「給愛麗絲」與隨機生成模式" },
     ]
@@ -1642,10 +1659,11 @@ const games = [
     stars: "★★★★☆",
     url: "games/zombie-hunter/index.html",
     icon: "assets/images/zombie-aaa-icon.png",
-    covers: ["assets/images/zombie-aaa-icon.png", "assets/images/zombie-aaa-icon-v105.png", "assets/images/zombie-aaa-icon-v106.png", "assets/images/zombie-aaa-icon-v107.png", "assets/images/zombie-aaa-icon-v108.png"],
+    covers: ["assets/images/zombie-aaa-icon.png", "assets/images/zombie-aaa-icon-v105.png", "assets/images/zombie-aaa-icon-v106.png", "assets/images/zombie-aaa-icon-v107.png", "assets/images/zombie-aaa-icon-v108.png", "assets/images/zombie-aaa-icon-v110.jpeg"],
     collection: "zombie_hunter",
     painter: "zombie",
     changelog: [
+      { ver: "v1.0.10", text: "新增 ✨ 金色補給殭屍 — 擊殺後補時間與生命" },
       { ver: "v1.0.8", text: "新增 🪞 鏡像殭屍 — 本體與鏡像皆可擊殺" },
       { ver: "v1.0.7", text: "新增 🧬 分裂殭屍 — 擊殺後產生迷你殭屍" },
       { ver: "v1.0.6", text: "新增 ☣️ 毒霧殭屍 — 擊殺後玩家衝刺" },
@@ -1664,10 +1682,11 @@ const games = [
     stars: "★★★★☆",
     url: "games/cyber-tetris/index.html",
     icon: "assets/images/cyber-tetris-aaa-icon.png",
-    covers: ["assets/images/cyber-tetris-aaa-icon.png", "assets/images/cyber-tetris-aaa-icon-v105.png", "assets/images/cyber-tetris-aaa-icon-v106.png", "assets/images/cyber-tetris-aaa-icon-v107.png", "assets/images/cyber-tetris-aaa-icon-v108.png"],
+    covers: ["assets/images/cyber-tetris-aaa-icon.png", "assets/images/cyber-tetris-aaa-icon-v105.png", "assets/images/cyber-tetris-aaa-icon-v106.png", "assets/images/cyber-tetris-aaa-icon-v107.png", "assets/images/cyber-tetris-aaa-icon-v108.png", "assets/images/cyber-tetris-aaa-icon-v110.jpeg"],
     collection: "cyber_tetris",
     painter: "cyber",
     changelog: [
+      { ver: "v1.0.10", text: "新增 🌀 Vortex 核心 — 吸引附近方塊下墜並加分" },
       { ver: "v1.0.8", text: "新增 🛡️ 護盾方塊 — 堆頂危機時自動救援一次" },
       { ver: "v1.0.7", text: "新增 🛠️ 鑽頭方塊 — 落地清除整欄" },
       { ver: "v1.0.6", text: "新增 🕒 時間核心 — 8 秒慢速下落" },
@@ -1683,10 +1702,11 @@ const games = [
     stars: "★★★★☆",
     url: "games/lcd-retro/index.html",
     icon: "assets/images/lcd-retro-cover-v110.jpeg",
-    covers: ["assets/images/lcd-retro-cover-v109.jpeg", "assets/images/lcd-retro-cover-v110.jpeg"],
+    covers: ["assets/images/lcd-retro-cover-v109.jpeg", "assets/images/lcd-retro-cover-v110.jpeg", "assets/images/lcd-retro-cover-v111.jpeg"],
     collection: "lcd_retro",
     painter: "lcd",
     changelog: [
+      { ver: "v1.0.10", text: "新增 ☕ 咖啡補給 — 射中後加分並補生命" },
       { ver: "v1.0.9", text: "新增 LCD 懷舊槍手，含手機控制、回主畫面與 Firebase 排行榜" },
     ]
   },

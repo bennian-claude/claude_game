@@ -424,7 +424,7 @@
 
 <div id="game-wrapper">
     <h1>CYBER TETRIS</h1>
-    <p style="margin:-8px 0 0;color:rgba(255,255,255,0.35);font-size:11px;letter-spacing:2px">Release v1.0.8</p>
+    <p style="margin:-8px 0 0;color:rgba(255,255,255,0.35);font-size:11px;letter-spacing:2px">Release v1.0.10</p>
 
     <div id="game-container">
         <div id="canvas-wrapper">
@@ -508,7 +508,8 @@
         '#ffee00',
         '#8affff',
         '#ff9f1c',
-        '#55ff88'
+        '#55ff88',
+        '#ff66cc'
     ];
 
     const standardPieces = {
@@ -524,6 +525,7 @@
     let particles = [];
     let lasers = [];
     let drillBeams = [];
+    let vortexBursts = [];
 
     function createParticles(x, y, colorStr, amount = 10) {
         for(let i=0; i<amount; i++) {
@@ -553,6 +555,19 @@
             context.fillRect(beam.x + 0.5 - beam.life/2, 0, beam.life, 20);
             context.fillStyle = `rgba(255, 255, 255, ${beam.life})`;
             context.fillRect(beam.x + 0.4, 0, 0.2, 20);
+        });
+        vortexBursts.forEach((burst, index) => {
+            burst.life -= 0.04;
+            if(burst.life <= 0) { vortexBursts.splice(index, 1); return; }
+            context.strokeStyle = `rgba(255, 102, 204, ${burst.life})`;
+            context.lineWidth = 0.08 + burst.life * 0.08;
+            context.beginPath();
+            context.arc(burst.x + 0.5, burst.y + 0.5, (1.8 - burst.life) * 3.2, 0, Math.PI * 2);
+            context.stroke();
+            context.strokeStyle = `rgba(255, 255, 255, ${burst.life * 0.7})`;
+            context.beginPath();
+            context.arc(burst.x + 0.5, burst.y + 0.5, (1.4 - burst.life) * 2.2, 0, Math.PI * 2);
+            context.stroke();
         });
 
         particles.forEach((p, index) => {
@@ -641,6 +656,21 @@
             ctx.quadraticCurveTo(x + 0.82, y + 0.3, x + 0.5, y + 0.82);
             ctx.quadraticCurveTo(x + 0.18, y + 0.3, x + 0.5, y + 0.18);
             ctx.stroke();
+        } else if (value === 16) {
+            ctx.fillStyle = 'rgba(255,102,204,0.42)';
+            ctx.beginPath();
+            ctx.arc(x + 0.5, y + 0.5, 0.35, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 0.05;
+            ctx.beginPath();
+            ctx.arc(x + 0.5, y + 0.5, 0.18, 0.4, Math.PI * 1.7);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x + 0.5, y + 0.16);
+            ctx.lineTo(x + 0.62, y + 0.46);
+            ctx.lineTo(x + 0.86, y + 0.5);
+            ctx.stroke();
         } else {
             ctx.fillStyle = color;
             ctx.globalAlpha = isGhost ? 0.1 : 0.4;
@@ -671,7 +701,8 @@
             if (rand < 0.68) return { matrix: [[12,12,12,12]], type: 'laser' };
             if (rand < 0.82) return { matrix: [[13]], type: 'timecore' };
             if (rand < 0.91) return { matrix: [[14],[14],[14]], type: 'drill' };
-            if (rand < 0.98) return { matrix: [[15,15],[0,15]], type: 'shield' };
+            if (rand < 0.97) return { matrix: [[15,15],[0,15]], type: 'shield' };
+            if (rand < 0.99) return { matrix: [[16]], type: 'vortex' };
 
             let normal = generateNormalMatrix();
             let quantumMatrix = normal.map(row => row.map(v => v !== 0 ? 11 : 0));
@@ -721,6 +752,7 @@
         let shieldBlocks = 0;
         const laserRows = new Set();
         const drillCols = new Set();
+        const vortexCells = [];
         p.matrix.forEach((row, y) => {
             row.forEach((value, x) => {
                 if (value !== 0) {
@@ -734,6 +766,7 @@
                         if (value === 13) isTimeCore = true;
                         if (value === 14) drillCols.add(bx);
                         if (value === 15) shieldBlocks++;
+                        if (value === 16) vortexCells.push({ x: bx, y: by });
                     }
                 }
             });
@@ -785,6 +818,22 @@
             player.score += 120;
             lasers.push({y: Math.max(0, Math.min(19, p.pos.y + 1)), life: 0.55});
         }
+        vortexCells.forEach(cell => {
+            let pulled = 0;
+            for (let y = cell.y - 1; y >= 0; y--) {
+                for (let x = Math.max(0, cell.x - 2); x <= Math.min(11, cell.x + 2); x++) {
+                    if (board[y][x] !== 0 && board[y + 1] && board[y + 1][x] === 0) {
+                        board[y + 1][x] = board[y][x];
+                        board[y][x] = 0;
+                        createParticles(x, y + 1, '#ff66cc', 5);
+                        pulled++;
+                    }
+                }
+            }
+            player.score += pulled * 25 + 100;
+            vortexBursts.push({ x: cell.x, y: cell.y, life: 1.2 });
+            triggerScreenShake();
+        });
     }
 
     function rotate(matrix, dir) {
@@ -1109,7 +1158,7 @@
         if (gameState === 'START' || gameState === 'GAMEOVER') {
             arena.forEach(row => row.fill(0));
             player.score = 0; player.lines = 0; player.level = 1; player.shields = 0;
-            player.nextObj = null; particles = []; lasers = []; drillBeams = []; slowMoTimer = 0;
+            player.nextObj = null; particles = []; lasers = []; drillBeams = []; vortexBursts = []; slowMoTimer = 0;
             playerReset();
             updateScore();
             gameState = 'PLAYING';
