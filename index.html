@@ -1409,15 +1409,43 @@ function paintLCDRetro(canvas) {
   const W = canvas.width = 560, H = canvas.height = 315;
   const ctx = canvas.getContext("2d");
   let frame = 0;
-  const lanes = [112, 210, 352, 462];
+  const lanes = [132, 238, 344, 450];
   const shots = [];
 
-  function drawLCDPerson(x, y, facing = 1, role = "cowboy") {
+  function drawSegment(x, y, w, h, alpha = 0.9) {
+    ctx.fillStyle = `rgba(25,42,29,${alpha})`;
+    ctx.fillRect(x, y, w, h);
+  }
+
+  function drawTinyIcon(x, y, type) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = "rgba(25,42,29,0.88)";
+    if (type === "heart") {
+      ctx.beginPath();
+      ctx.moveTo(0, 5);
+      ctx.bezierCurveTo(-14, -5, -18, 10, 0, 22);
+      ctx.bezierCurveTo(18, 10, 14, -5, 0, 5);
+      ctx.fill();
+    } else if (type === "bottle") {
+      ctx.fillRect(-5, -18, 10, 8);
+      ctx.fillRect(-9, -10, 18, 34);
+      ctx.fillStyle = "rgba(198,220,185,0.28)";
+      ctx.fillRect(-5, -2, 10, 4);
+    } else {
+      ctx.fillRect(-14, -8, 28, 16);
+      ctx.fillRect(-6, 8, 12, 12);
+    }
+    ctx.restore();
+  }
+
+  function drawLCDPerson(x, y, facing = 1, role = "cowboy", active = true) {
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(facing, 1);
-    ctx.strokeStyle = "#15231a";
-    ctx.fillStyle = "#15231a";
+    ctx.globalAlpha = active ? 0.92 : 0.2;
+    ctx.strokeStyle = "#192a1d";
+    ctx.fillStyle = "#192a1d";
     ctx.lineWidth = 4;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -1429,59 +1457,131 @@ function paintLCDRetro(canvas) {
     if (role === "bar") {
       ctx.strokeRect(-24, 22, 50, 18);
       ctx.beginPath(); ctx.moveTo(-16, 40); ctx.lineTo(-22, 52); ctx.moveTo(18, 40); ctx.lineTo(24, 52); ctx.stroke();
+    } else if (role === "gunfighter") {
+      ctx.beginPath(); ctx.moveTo(25, 2); ctx.lineTo(48, -5); ctx.lineTo(56, -2); ctx.stroke();
     }
     ctx.restore();
   }
 
   function draw() {
     frame++;
-    const bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, "#c3d1c2");
-    bg.addColorStop(1, "#aebdaa");
+    const bg = ctx.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, "#140f0b");
+    bg.addColorStop(0.48, "#2c231a");
+    bg.addColorStop(1, "#090706");
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
-    ctx.strokeStyle = "rgba(21,35,26,0.18)";
-    ctx.lineWidth = 2;
-    for (let y = 40; y < 244; y += 42) {
-      ctx.beginPath(); ctx.moveTo(20, y); ctx.lineTo(W - 20, y + Math.sin(frame * 0.02 + y) * 2); ctx.stroke();
-    }
-    ctx.strokeStyle = "rgba(21,35,26,0.62)";
-    ctx.strokeRect(18, 18, W - 36, H - 36);
-    ctx.strokeStyle = "rgba(21,35,26,0.28)";
-    ctx.beginPath(); ctx.moveTo(0, 248); ctx.lineTo(W, 248); ctx.stroke();
+    ctx.save();
+    ctx.shadowColor = "rgba(255,180,86,0.35)";
+    ctx.shadowBlur = 32;
+    ctx.fillStyle = "#1e1814";
+    ctx.beginPath();
+    ctx.roundRect(34, 18, W - 68, H - 36, 26);
+    ctx.fill();
+    ctx.restore();
 
-    drawLCDPerson(lanes[0] + Math.sin(frame * 0.035) * 8, 230, 1, "cowboy");
-    drawLCDPerson(lanes[1], 160 + Math.sin(frame * 0.04) * 4, 1, "patron");
-    drawLCDPerson(lanes[2], 160 + Math.cos(frame * 0.035) * 4, -1, "patron");
-    drawLCDPerson(lanes[3], 112 + Math.sin(frame * 0.03) * 5, -1, "bar");
+    const body = ctx.createLinearGradient(34, 18, W - 34, H - 18);
+    body.addColorStop(0, "#45372c");
+    body.addColorStop(0.5, "#18130f");
+    body.addColorStop(1, "#514235");
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.roundRect(30, 16, W - 60, H - 32, 26);
+    ctx.fill();
+
+    ctx.fillStyle = "#0a0806";
+    ctx.beginPath();
+    ctx.roundRect(58, 44, W - 116, H - 88, 18);
+    ctx.fill();
+
+    const screen = ctx.createLinearGradient(74, 58, 486, 258);
+    screen.addColorStop(0, "#d6e0c9");
+    screen.addColorStop(0.48, "#a9b99d");
+    screen.addColorStop(1, "#6f846c");
+    ctx.fillStyle = screen;
+    ctx.beginPath();
+    ctx.roundRect(74, 58, W - 148, H - 116, 12);
+    ctx.fill();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(74, 58, W - 148, H - 116, 12);
+    ctx.clip();
+    ctx.strokeStyle = "rgba(25,42,29,0.12)";
+    ctx.lineWidth = 1.5;
+    for (let y = 72; y < 246; y += 14) {
+      ctx.beginPath();
+      ctx.moveTo(74, y);
+      ctx.lineTo(W - 74, y + Math.sin(frame * 0.02 + y) * 1.2);
+      ctx.stroke();
+    }
+    for (let x = 98; x < W - 98; x += 54) {
+      ctx.strokeStyle = "rgba(25,42,29,0.09)";
+      ctx.beginPath(); ctx.moveTo(x, 58); ctx.lineTo(x, 257); ctx.stroke();
+    }
+
+    ctx.fillStyle = "rgba(25,42,29,0.2)";
+    ctx.fillRect(88, 205, W - 176, 3);
+    ctx.fillRect(92, 104, W - 184, 3);
+
+    const blink = Math.sin(frame * 0.12) > -0.2;
+    drawLCDPerson(lanes[0] + Math.sin(frame * 0.035) * 7, 219, 1, "gunfighter", true);
+    drawLCDPerson(lanes[1], 161 + Math.sin(frame * 0.04) * 4, 1, "patron", true);
+    drawLCDPerson(lanes[2], 163 + Math.cos(frame * 0.035) * 5, -1, "patron", blink);
+    drawLCDPerson(lanes[3], 122 + Math.sin(frame * 0.03) * 5, -1, "bar", true);
+    drawTinyIcon(116, 86, "heart");
+    drawTinyIcon(148, 86, "heart");
+    drawTinyIcon(410, 84, "bottle");
+    drawTinyIcon(442, 84, "bottle");
 
     if (frame % 70 === 1) {
-      shots.push({ x: lanes[3] - 28, y: 112, vx: -3.2 });
+      shots.push({ x: lanes[3] - 28, y: 122, vx: -3.4, spark: 1 });
+    }
+    if (frame % 96 === 34) {
+      shots.push({ x: lanes[0] + 50, y: 214, vx: 3.8, spark: 1 });
     }
     for (let i = shots.length - 1; i >= 0; i--) {
       const s = shots[i];
       s.x += s.vx;
-      ctx.fillStyle = "#15231a";
-      ctx.beginPath(); ctx.arc(s.x, s.y, 7, 0, Math.PI * 2); ctx.fill();
-      if (s.x < -20) shots.splice(i, 1);
+      s.spark *= 0.92;
+      ctx.fillStyle = "#192a1d";
+      ctx.beginPath(); ctx.arc(s.x, s.y, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = `rgba(245,255,220,${s.spark * 0.45})`;
+      ctx.fillRect(s.x - (s.vx > 0 ? 24 : 0), s.y - 2, 24, 4);
+      if (s.x < 50 || s.x > W - 50) shots.splice(i, 1);
     }
 
     const pulse = 0.55 + Math.sin(frame * 0.08) * 0.35;
-    ctx.fillStyle = `rgba(21,35,26,${pulse})`;
-    ctx.font = "bold 24px monospace";
-    ctx.fillText("SCORE 0120", 28, 288);
-    ctx.fillText("LIFE 3", 432, 288);
-    ctx.font = "bold 13px monospace";
-    ctx.fillStyle = "rgba(21,35,26,0.56)";
-    ctx.fillText("LCD RESTAURANT GUNFIGHTER", 24, 30);
+    ctx.fillStyle = `rgba(25,42,29,${pulse})`;
+    ctx.font = "bold 22px monospace";
+    ctx.fillText("SCORE 0120", 94, 240);
+    ctx.fillText("LIFE 3", 386, 240);
+    ctx.font = "bold 12px monospace";
+    ctx.fillStyle = "rgba(25,42,29,0.54)";
+    ctx.fillText("RESTAURANT GUNFIGHTER", 174, 82);
+
+    for (let i = 0; i < 4; i++) {
+      drawSegment(96 + i * 18, 224, 12, 4, 0.35 + (i % 2) * 0.22);
+      drawSegment(466 - i * 18, 224, 12, 4, 0.35 + (i % 2) * 0.22);
+    }
 
     const glare = ctx.createLinearGradient(0, 0, W, H);
-    glare.addColorStop(0, "rgba(255,255,255,0.22)");
-    glare.addColorStop(0.42, "rgba(255,255,255,0)");
-    glare.addColorStop(1, "rgba(255,255,255,0.16)");
+    glare.addColorStop(0, "rgba(255,255,255,0.18)");
+    glare.addColorStop(0.38, "rgba(255,255,255,0)");
+    glare.addColorStop(0.55, "rgba(255,255,255,0.2)");
+    glare.addColorStop(1, "rgba(255,255,255,0.06)");
     ctx.fillStyle = glare;
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillRect(74, 58, W - 148, H - 116);
+    ctx.restore();
+
+    ctx.fillStyle = "rgba(255,205,90,0.9)";
+    ctx.beginPath(); ctx.arc(72, 262, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(180,30,30,0.86)";
+    ctx.beginPath(); ctx.arc(488, 260, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.16)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(74, 58, W - 148, H - 116);
 
     requestAnimationFrame(draw);
   }
@@ -1530,14 +1630,8 @@ const games = [
     collection: "rhythm_game",
     painter: "rhythm",
     changelog: [
-      { ver: "v1.0.8", text: "新增曲目「威廉泰爾序曲 🐎」— gallop 連音、雙鍵與變速段" },
-      { ver: "v1.0.7", text: "新增曲目「土耳其進行曲 🥁」— 快速連音、雙鍵和弦與變速段落" },
-      { ver: "v1.0.6", text: "新增曲目「卡農變奏 🎻」— 連音、和弦與節奏變化" },
-      { ver: "v1.0.5", text: "新增曲目「快樂頌 🎵」(Ode to Joy)" },
-      { ver: "v1.0.4", text: "新增曲目「瑪麗有隻小羊 🐑」(Mary Had a Little Lamb)" },
-      { ver: "v1.0.3", text: "新增曲目「鈴兒響叮噹 🎄」(Jingle Bells)" },
-      { ver: "v1.0.2", text: "新增曲目「生日快樂 🎂」(Happy Birthday)" },
-      { ver: "v1.0.1", text: "新增曲目「小星星 ⭐」(Twinkle Twinkle Little Star)" },
+      { ver: "v1.0.9", text: "回復原始 Rhythm 版本，保留排行榜輸入並加入手機觸控" },
+      { ver: "v1.0.0", text: "原始曲目「給愛麗絲」與隨機生成模式" },
     ]
   },
   {
@@ -1588,8 +1682,8 @@ const games = [
     accent: "#d8b13f",
     stars: "★★★★☆",
     url: "games/lcd-retro/index.html",
-    icon: "assets/images/lcd-retro-cover-v109.jpeg",
-    covers: ["assets/images/lcd-retro-cover-v109.jpeg"],
+    icon: "assets/images/lcd-retro-cover-v110.jpeg",
+    covers: ["assets/images/lcd-retro-cover-v109.jpeg", "assets/images/lcd-retro-cover-v110.jpeg"],
     collection: "lcd_retro",
     painter: "lcd",
     changelog: [

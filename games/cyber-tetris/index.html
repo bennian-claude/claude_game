@@ -306,6 +306,7 @@
         }
 
         #btn-up { grid-column: 2; grid-row: 1; }
+        #btn-hard-drop { grid-column: 3; grid-row: 1; }
         #btn-left { grid-column: 1; grid-row: 2; }
         #btn-down { grid-column: 2; grid-row: 2; }
         #btn-right { grid-column: 3; grid-row: 2; }
@@ -470,10 +471,11 @@
     </div>
 
     <div id="controls">
-        <button id="btn-up" class="control-btn">↻</button>
-        <button id="btn-left" class="control-btn">←</button>
-        <button id="btn-down" class="control-btn">↓</button>
-        <button id="btn-right" class="control-btn">→</button>
+        <button id="btn-up" class="control-btn" aria-label="旋轉">↻</button>
+        <button id="btn-hard-drop" class="control-btn" aria-label="直下到底">⤓</button>
+        <button id="btn-left" class="control-btn" aria-label="左移">←</button>
+        <button id="btn-down" class="control-btn" aria-label="加速下落">↓</button>
+        <button id="btn-right" class="control-btn" aria-label="右移">→</button>
     </div>
 </div>
 
@@ -1196,6 +1198,7 @@
     bindTouch('btn-right', () => playerMove(1), true);
     bindTouch('btn-down', () => playerDrop(), true);
     bindTouch('btn-up', () => playerRotate(1));
+    bindTouch('btn-hard-drop', () => playerHardDrop());
 
     syncInteractionLayers();
     draw();
